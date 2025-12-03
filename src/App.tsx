@@ -31,6 +31,16 @@ function App() {
   const isAdmin = currentUser?.role === "admin";
   const selectedProject = useMemo(() => projects.find((p) => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
 
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setGlobalSearchTerm("");
+    if (window.innerWidth < 768) {
+      setView('menu');
+    } else {
+      setView('stats');
+    }
+  };
+
   // Desktop: Switch to stats view on load
   useEffect(() => {
     if (window.innerWidth >= 768 && view === 'menu') {
@@ -74,7 +84,8 @@ function App() {
         view={view} 
         setView={setView} 
         setGlobalSearchTerm={setGlobalSearchTerm} 
-        handleLogout={handleLogout} 
+        handleLogout={handleLogout}
+        handleLogoClick={handleLogoClick}
       />
       
       <main className="flex-1 w-full bg-[#f8fafc] min-h-screen md:ml-64 transition-all flex flex-col">
@@ -85,6 +96,8 @@ function App() {
           setGlobalSearchTerm={setGlobalSearchTerm}
           isSearchExpanded={isSearchExpanded}
           setIsSearchExpanded={setIsSearchExpanded}
+          setView={setView}
+          handleLogoClick={handleLogoClick}
         />
 
         <div className="flex-1 relative">

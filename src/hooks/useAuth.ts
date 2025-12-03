@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth } from '../firebase';
-import { GoogleAuthProvider, signInWithRedirect, User as FirebaseUser } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, User as FirebaseUser } from 'firebase/auth';
 import { User } from '../types';
 import { ADMIN_EMAIL } from '../constants/project-data';
 
@@ -10,8 +10,20 @@ export const useAuth = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showSplash, setShowSplash] = useState(true);
 
+  const formatUser = (firebaseUser: FirebaseUser): User => {
+    const role = firebaseUser.email === ADMIN_EMAIL ? "admin" : "user";
+    return {
+      uid: firebaseUser.uid,
+      name: firebaseUser.displayName || "Utilizador sem nome",
+      email: firebaseUser.email || "",
+      role
+    };
+  };
+
   useEffect(() => {
+    // Escutar mudanças de estado (Login/Logout)
     const unsubscribe = auth.onAuthStateChanged(firebaseUser => {
+      console.log("Estado de autenticação alterado:", firebaseUser ? firebaseUser.email : "Nenhum utilizador");
       if (firebaseUser) {
         const user = formatUser(firebaseUser);
         setCurrentUser(user);
@@ -21,21 +33,12 @@ export const useAuth = () => {
       }
       setAuthLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
-  const formatUser = (firebaseUser: FirebaseUser): User => {
-    const role = firebaseUser.email === ADMIN_EMAIL ? "admin" : "user";
-    return {
-      uid: firebaseUser.uid,
-      name: firebaseUser.displayName || "Utilizador sem nome",
-      email: firebaseUser.email || "",
-      role
-    };
-  }
-
   const handleLogin = async (data: { name: string; email: string }) => {
-    // Este método agora só é usado para o login "mock"
+    // Login mock
     setAuthLoading(true);
     setAuthError("");
     const role = data.email === ADMIN_EMAIL ? "admin" : "user";
@@ -51,17 +54,22 @@ export const useAuth = () => {
   };
 
   const handleGoogleLogin = async () => {
-    setAuthLoading(true);
     setAuthError("");
+    // Não definimos authLoading=true aqui para não esconder o botão caso o popup seja fechado
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(auth, provider);
-      // O onAuthStateChanged tratará de definir o utilizador
+      await signInWithPopup(auth, provider);
+      // O sucesso é tratado pelo onAuthStateChanged
     } catch (error: any) {
-      console.error("Erro no login com Google:", error);
-      setAuthError("Falha ao autenticar com o Google. Por favor, tente novamente.");
+      console.error("Erro no login Google:", error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        setAuthError("O login foi cancelado (janela fechada).");
+      } else if (error.code === 'auth/popup-blocked') {
+        setAuthError("O navegador bloqueou a janela de login. Por favor, permita popups para este site.");
+      } else {
+        setAuthError(error.message || "Erro ao conectar com Google.");
+      }
     }
-    setAuthLoading(false);
   };
 
   const handleLogout = async () => {
@@ -76,7 +84,7 @@ export const useAuth = () => {
     currentUser,
     showSplash,
     setShowSplash,
-    handleLogin, // Manter o login antigo, caso seja necessário
+    handleLogin,
     handleGoogleLogin,
     handleLogout
   };

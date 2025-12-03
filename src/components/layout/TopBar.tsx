@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
-import { User } from '../../types';
+import { User, ViewType } from '../../types';
 
 interface TopBarProps {
   currentUser: User | null;
@@ -9,6 +9,8 @@ interface TopBarProps {
   setGlobalSearchTerm: (term: string) => void;
   isSearchExpanded: boolean;
   setIsSearchExpanded: (expanded: boolean) => void;
+  setView: (view: ViewType) => void;
+  handleLogoClick: (e: React.MouseEvent) => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -17,7 +19,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   globalSearchTerm,
   setGlobalSearchTerm,
   isSearchExpanded,
-  setIsSearchExpanded
+  setIsSearchExpanded,
+  handleLogoClick
 }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,7 +32,10 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   return (
     <div className="bg-white px-6 py-4 sticky top-0 z-40 flex items-center justify-between h-[80px] border-b border-slate-50">
-      <div className="flex items-center gap-1 md:hidden">
+      <div 
+        className="flex items-center gap-1 md:hidden cursor-pointer active:scale-95 transition-transform" 
+        onClick={handleLogoClick}
+      >
         <span className="text-2xl font-black text-slate-900 tracking-tighter">ARCO</span>
         <div className="h-1.5 w-1.5 rounded-full bg-orange-500 mt-1.5"></div>
       </div>

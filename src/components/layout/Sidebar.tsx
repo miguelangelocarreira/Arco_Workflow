@@ -7,11 +7,12 @@ interface SidebarProps {
   setView: (view: ViewType) => void;
   setGlobalSearchTerm: (term: string) => void;
   handleLogout: () => void;
+  handleLogoClick: (e: React.MouseEvent) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ view, setView, setGlobalSearchTerm, handleLogout }) => (
+export const Sidebar: React.FC<SidebarProps> = ({ view, setView, setGlobalSearchTerm, handleLogout, handleLogoClick }) => (
   <div className="hidden md:flex flex-col w-64 bg-[#1e293b] h-screen fixed left-0 top-0 z-50 shadow-2xl">
-    <div className="p-8 flex items-center gap-2 h-[80px]">
+    <div className="p-8 flex items-center gap-2 h-[80px] cursor-pointer hover:opacity-90 transition-opacity" onClick={handleLogoClick}>
       <span className="text-3xl font-black text-white tracking-tighter font-sans">ARCO</span>
       <div className="h-2 w-2 rounded-full bg-orange-500 mt-2"></div>
     </div>
