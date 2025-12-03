@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { sanitize } from '../../utils/formatting';
+import { GoogleIcon } from '../icons/GoogleIcon';
 
 interface LoginScreenProps {
   loading: boolean;
   error: string;
   onLogin: (data: { name: string; email: string }) => void;
+  onGoogleLogin: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ loading, error, onLogin }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ loading, error, onLogin, onGoogleLogin }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
@@ -64,9 +66,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ loading, error, onLogi
               disabled={loading}
               className="w-full bg-white text-black font-bold rounded-2xl py-4 text-xs uppercase tracking-wide hover:bg-slate-200 transition active:scale-[0.98] disabled:opacity-70 mt-2"
             >
-              {loading ? "A entrar..." : "Entrar"}
+              {loading ? "A entrar..." : "Entrar com Email"}
             </button>
           </form>
+
+          <div className="flex items-center gap-4 my-6">
+            <hr className="w-full border-slate-700/50" />
+            <span className="text-slate-500 text-xs">OU</span>
+            <hr className="w-full border-slate-700/50" />
+          </div>
+
+          <button
+            onClick={onGoogleLogin}
+            disabled={loading}
+            className="w-full bg-white/10 border border-white/20 text-white font-bold rounded-2xl py-3 text-sm flex items-center justify-center gap-3 hover:bg-white/20 transition active:scale-[0.98] disabled:opacity-70"
+          >
+            <GoogleIcon />
+            <span>Entrar com Google</span>
+          </button>
         </div>
       </div>
     </div>

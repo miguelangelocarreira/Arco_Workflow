@@ -16,7 +16,7 @@ import { ViewType } from './types';
 import { ADMIN_EMAIL } from './constants/project-data';
 
 function App() {
-  const { authLoading, authError, currentUser, showSplash, setShowSplash, handleLogin, handleLogout } = useAuth();
+  const { authLoading, authError, currentUser, showSplash, setShowSplash, handleLogin, handleGoogleLogin, handleLogout } = useAuth();
   const { clients, projects, loadingData, createClient, createProject, updateProject, deleteProject } = useData(currentUser);
 
   // VIEW STATES
@@ -65,7 +65,7 @@ function App() {
   }, [globalSearchTerm, searchResults]);
 
   if (authLoading) return <div className="min-h-screen bg-black" />;
-  if (!currentUser) return <LoginScreen loading={authLoading} error={authError} onLogin={handleLogin} />;
+  if (!currentUser) return <LoginScreen loading={authLoading} error={authError} onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} />;
   if (showSplash) return <SplashScreen onComplete={() => setShowSplash(false)} />;
 
   return (
