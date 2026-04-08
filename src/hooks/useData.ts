@@ -1,8 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Client, Project, User } from '../types';
-import { storage } from '../utils/storage';
-import { generateLeiriaData } from '../utils/sample-data';
 import { sanitize } from '../utils/formatting';
+import { generateLeiriaData } from '../utils/sample-data';
+import {
+  subscribeClients,
+  subscribeProjects,
+  createClientDoc,
+  createProjectDoc,
+  updateProjectDoc,
+  deleteProjectDoc,
+  seedIfEmpty,
+} from '../utils/db';
 
 export const useData = (currentUser: User | null) => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -10,43 +18,33 @@ export const useData = (currentUser: User | null) => {
   const [loadingData, setLoadingData] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
 
-  const persistData = (newClients: Client[], newProjects: Project[]) => {
-    storage.set("aw_clients", newClients);
-    storage.set("aw_projects", newProjects);
-  };
+  useEffect(() => {
+    if (!currentUser) return;
 
-  const loadData = useCallback(async () => {
     setLoadingData(true);
     setDataError(null);
-    try {
-      let loadedClients: Client[] = storage.get("aw_clients") || [];
-      let loadedProjects: Project[] = storage.get("aw_projects") || [];
 
-      if (loadedClients.length === 0) {
-        const { clients: seedC, projects: seedP } = generateLeiriaData();
-        loadedClients = seedC;
-        loadedProjects = seedP;
-        persistData(seedC, seedP);
-      }
+    // Seed Firestore on first run, then subscribe to real-time updates
+    const { clients: seedC, projects: seedP } = generateLeiriaData();
+    seedIfEmpty(seedC, seedP).catch(() => setDataError("Erro ao inicializar dados."));
 
-      setClients(loadedClients);
-      setProjects(loadedProjects);
-    } catch {
-      setDataError("Erro ao carregar dados.");
-    } finally {
+    const unsubClients = subscribeClients(data => {
+      setClients(data);
       setLoadingData(false);
-    }
-  }, []);
+    });
 
-  useEffect(() => {
-    if (currentUser) {
-      loadData();
-    }
-  }, [currentUser, loadData]);
+    const unsubProjects = subscribeProjects(data => {
+      setProjects(data);
+    });
+
+    return () => {
+      unsubClients();
+      unsubProjects();
+    };
+  }, [currentUser]);
 
   const createClient = async (payload: Partial<Client>): Promise<Client> => {
-    const clientBase: Client = {
-      id: "local-c-" + crypto.randomUUID(),
+    const data: Omit<Client, 'id'> = {
       name: sanitize(payload.name || ""),
       email: sanitize(payload.email || ""),
       phone: sanitize(payload.phone || ""),
@@ -56,16 +54,11 @@ export const useData = (currentUser: User | null) => {
       city: sanitize(payload.city || ""),
       createdAt: Date.now(),
     };
-
-    const updatedClients = [...clients, clientBase];
-    setClients(updatedClients);
-    persistData(updatedClients, projects);
-    return clientBase;
+    return createClientDoc(data);
   };
 
   const createProject = async (payload: Partial<Project>): Promise<Project> => {
-    const projectBase: Project = {
-      id: "local-p-" + crypto.randomUUID(),
+    const data: Omit<Project, 'id'> = {
       clientId: payload.clientId || "",
       title: sanitize(payload.title || ""),
       status: payload.status || "orçamento",
@@ -76,29 +69,15 @@ export const useData = (currentUser: User | null) => {
       endDate: payload.endDate || null,
       createdAt: Date.now(),
     };
-
-    const updatedProjects = [...projects, projectBase];
-    setProjects(updatedProjects);
-    persistData(clients, updatedProjects);
-    return projectBase;
+    return createProjectDoc(data);
   };
 
-  const updateProject = async (id: string, patch: Partial<Project>) => {
-    const idx = projects.findIndex((p) => p.id === id);
-    if (idx === -1) return;
-
-    const updated = { ...projects[idx], ...patch };
-    const nextProjects = [...projects];
-    nextProjects[idx] = updated;
-
-    setProjects(nextProjects);
-    persistData(clients, nextProjects);
+  const updateProject = async (id: string, patch: Partial<Project>): Promise<void> => {
+    await updateProjectDoc(id, patch);
   };
 
-  const deleteProject = async (id: string) => {
-    const nextProjects = projects.filter((p) => p.id !== id);
-    setProjects(nextProjects);
-    persistData(clients, nextProjects);
+  const deleteProject = async (id: string): Promise<void> => {
+    await deleteProjectDoc(id);
   };
 
   return {
@@ -109,6 +88,6 @@ export const useData = (currentUser: User | null) => {
     createClient,
     createProject,
     updateProject,
-    deleteProject
+    deleteProject,
   };
 };
