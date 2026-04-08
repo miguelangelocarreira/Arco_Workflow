@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { auth } from '../firebase';
-import { GoogleAuthProvider, signInWithPopup, User as FirebaseUser, AuthError } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  User as FirebaseUser,
+  AuthError
+} from 'firebase/auth';
 import { User } from '../types';
 import { ADMIN_EMAIL } from '../constants/project-data';
 
@@ -9,12 +14,13 @@ export const useAuth = () => {
   const [authError, setAuthError] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showSplash, setShowSplash] = useState(true);
+  const [resetSent, setResetSent] = useState(false);
 
   const formatUser = (firebaseUser: FirebaseUser): User => {
     const role = firebaseUser.email === ADMIN_EMAIL ? "admin" : "user";
     return {
       uid: firebaseUser.uid,
-      name: firebaseUser.displayName || "Utilizador sem nome",
+      name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "Utilizador",
       email: firebaseUser.email || "",
       role
     };
@@ -23,47 +29,46 @@ export const useAuth = () => {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(firebaseUser => {
       if (firebaseUser) {
-        const user = formatUser(firebaseUser);
-        setCurrentUser(user);
+        setCurrentUser(formatUser(firebaseUser));
         setShowSplash(true);
       } else {
         setCurrentUser(null);
       }
       setAuthLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
-  const handleLogin = async (data: { name: string; email: string }) => {
+  const handleLogin = async (data: { email: string; password: string }) => {
     setAuthLoading(true);
     setAuthError("");
-    const role = data.email === ADMIN_EMAIL ? "admin" : "user";
-    const user: User = {
-      uid: crypto.randomUUID(),
-      name: data.name,
-      email: data.email,
-      role
-    };
-    setCurrentUser(user);
-    setAuthLoading(false);
-    setShowSplash(true);
-  };
-
-  const handleGoogleLogin = async () => {
-    setAuthError("");
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithEmailAndPassword(auth, data.email, data.password);
     } catch (error: unknown) {
       const authErr = error as AuthError;
-      if (authErr.code === 'auth/popup-closed-by-user') {
-        setAuthError("O login foi cancelado (janela fechada).");
-      } else if (authErr.code === 'auth/popup-blocked') {
-        setAuthError("O navegador bloqueou a janela de login. Por favor, permita popups para este site.");
+      if (authErr.code === 'auth/invalid-credential' || authErr.code === 'auth/wrong-password' || authErr.code === 'auth/user-not-found') {
+        setAuthError("Email ou password incorretos.");
+      } else if (authErr.code === 'auth/too-many-requests') {
+        setAuthError("Demasiadas tentativas. Tenta mais tarde ou repõe a password.");
       } else {
-        setAuthError(authErr.message || "Erro ao conectar com Google.");
+        setAuthError("Erro ao entrar. Verifica os teus dados.");
       }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (email: string) => {
+    if (!email) {
+      setAuthError("Introduz o teu email para repor a password.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setResetSent(true);
+      setAuthError("");
+    } catch {
+      setAuthError("Não foi possível enviar o email. Verifica o endereço.");
     }
   };
 
@@ -71,6 +76,7 @@ export const useAuth = () => {
     await auth.signOut();
     setCurrentUser(null);
     setShowSplash(false);
+    setResetSent(false);
   };
 
   return {
@@ -79,8 +85,9 @@ export const useAuth = () => {
     currentUser,
     showSplash,
     setShowSplash,
+    resetSent,
     handleLogin,
-    handleGoogleLogin,
+    handleForgotPassword,
     handleLogout
   };
 };

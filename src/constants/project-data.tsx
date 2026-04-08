@@ -45,4 +45,4 @@ export const SERVICE_SUGGESTIONS: ServiceSuggestion[] = [
   }
 ];
 
-export const ADMIN_EMAIL = "miguel.carreira@gmail.com";
+export const ADMIN_EMAIL = "geral.arcodavelha@gmail.com";

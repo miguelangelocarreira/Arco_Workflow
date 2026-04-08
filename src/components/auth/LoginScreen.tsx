@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
-import { sanitize } from '../../utils/formatting';
-import { GoogleIcon } from '../icons/GoogleIcon';
+import { X, Eye, EyeOff } from 'lucide-react';
 
 interface LoginScreenProps {
   loading: boolean;
   error: string;
-  onLogin: (data: { name: string; email: string }) => void;
-  onGoogleLogin: () => void;
+  resetSent: boolean;
+  onLogin: (data: { email: string; password: string }) => void;
+  onForgotPassword: (email: string) => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ loading, error, onLogin, onGoogleLogin }) => {
-  const [name, setName] = useState("");
+export const LoginScreen: React.FC<LoginScreenProps> = ({ loading, error, resetSent, onLogin, onForgotPassword }) => {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email) return;
-    onLogin({ name: sanitize(name), email: sanitize(email) });
+    if (!email || !password) return;
+    onLogin({ email, password });
   };
 
   return (
@@ -40,49 +40,59 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ loading, error, onLogi
 
           {error && (
             <div className="mb-4 text-xs bg-red-500/10 border border-red-500/20 text-red-200 px-3 py-2 rounded-xl flex gap-2">
-              <X size={12} className="mt-[2px]" />
+              <X size={12} className="mt-[2px] shrink-0" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {resetSent && (
+            <div className="mb-4 text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-200 px-3 py-2 rounded-xl">
+              Email de recuperação enviado. Verifica a tua caixa de entrada.
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
-              className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"
-              placeholder="Seu Nome"
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
-              required
-            />
-            <input
               type="email"
               className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"
               placeholder="seu@email.com"
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all pr-12"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+
             <button
-              type="submit" 
+              type="submit"
               disabled={loading}
               className="w-full bg-white text-black font-bold rounded-2xl py-4 text-xs uppercase tracking-wide hover:bg-slate-200 transition active:scale-[0.98] disabled:opacity-70 mt-2"
             >
-              {loading ? "A entrar..." : "Entrar com Email"}
+              {loading ? "A entrar..." : "Entrar"}
             </button>
           </form>
 
-          <div className="flex items-center gap-4 my-6">
-            <hr className="w-full border-slate-700/50" />
-            <span className="text-slate-500 text-xs">OU</span>
-            <hr className="w-full border-slate-700/50" />
-          </div>
-
           <button
-            onClick={onGoogleLogin}
-            disabled={loading}
-            className="w-full bg-white/10 border border-white/20 text-white font-bold rounded-2xl py-3 text-sm flex items-center justify-center gap-3 hover:bg-white/20 transition active:scale-[0.98] disabled:opacity-70"
+            type="button"
+            onClick={() => onForgotPassword(email)}
+            className="w-full text-center text-xs text-slate-500 hover:text-slate-300 transition-colors mt-4"
           >
-            <GoogleIcon />
-            <span>Entrar com Google</span>
+            Esqueci-me da password
           </button>
         </div>
       </div>

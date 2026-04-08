@@ -13,10 +13,9 @@ import { SearchResultsView } from './components/views/SearchResultsView';
 import { useAuth } from './hooks/useAuth';
 import { useData } from './hooks/useData';
 import { ViewType } from './types';
-import { ADMIN_EMAIL } from './constants/project-data';
 
 function App() {
-  const { authLoading, authError, currentUser, showSplash, setShowSplash, handleLogin, handleGoogleLogin, handleLogout } = useAuth();
+  const { authLoading, authError, currentUser, showSplash, setShowSplash, resetSent, handleLogin, handleForgotPassword, handleLogout } = useAuth();
   const { clients, projects, loadingData, createClient, createProject, updateProject, deleteProject } = useData(currentUser);
 
   // VIEW STATES
@@ -75,7 +74,7 @@ function App() {
   }, [globalSearchTerm, searchResults]);
 
   if (authLoading) return <div className="min-h-screen bg-black" />;
-  if (!currentUser) return <LoginScreen loading={authLoading} error={authError} onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} />;
+  if (!currentUser) return <LoginScreen loading={authLoading} error={authError} resetSent={resetSent} onLogin={handleLogin} onForgotPassword={handleForgotPassword} />;
   if (showSplash) return <SplashScreen onComplete={() => setShowSplash(false)} />;
 
   return (
