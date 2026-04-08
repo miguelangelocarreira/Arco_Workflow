@@ -9,6 +9,7 @@ import {
   createProjectDoc,
   updateProjectDoc,
   deleteProjectDoc,
+  logActivity,
   seedIfEmpty,
 } from '../utils/db';
 
@@ -24,7 +25,6 @@ export const useData = (currentUser: User | null) => {
     setLoadingData(true);
     setDataError(null);
 
-    // Seed Firestore on first run, then subscribe to real-time updates
     const { clients: seedC, projects: seedP } = generateLeiriaData();
     seedIfEmpty(seedC, seedP).catch(() => setDataError("Erro ao inicializar dados."));
 
@@ -54,7 +54,11 @@ export const useData = (currentUser: User | null) => {
       city: sanitize(payload.city || ""),
       createdAt: Date.now(),
     };
-    return createClientDoc(data);
+    const client = await createClientDoc(data);
+    if (currentUser) {
+      await logActivity(currentUser.uid, currentUser.name, 'created_client', 'client', client.id, client.name);
+    }
+    return client;
   };
 
   const createProject = async (payload: Partial<Project>): Promise<Project> => {
@@ -69,15 +73,46 @@ export const useData = (currentUser: User | null) => {
       endDate: payload.endDate || null,
       createdAt: Date.now(),
     };
-    return createProjectDoc(data);
+    const project = await createProjectDoc(data);
+    if (currentUser) {
+      await logActivity(currentUser.uid, currentUser.name, 'created_project', 'project', project.id, project.title);
+    }
+    return project;
   };
 
   const updateProject = async (id: string, patch: Partial<Project>): Promise<void> => {
+    const project = projects.find(p => p.id === id);
     await updateProjectDoc(id, patch);
+
+    if (currentUser && project) {
+      if (patch.status && patch.status !== project.status) {
+        await logActivity(
+          currentUser.uid, currentUser.name,
+          'changed_status', 'project', id, project.title,
+          `${project.status} → ${patch.status}`
+        );
+      } else if (patch.items && patch.items.length > (project.items?.length ?? 0)) {
+        const newItem = patch.items[patch.items.length - 1];
+        await logActivity(
+          currentUser.uid, currentUser.name,
+          'added_item', 'project', id, project.title,
+          newItem.desc
+        );
+      } else if (patch.items && patch.items.length < (project.items?.length ?? 0)) {
+        await logActivity(
+          currentUser.uid, currentUser.name,
+          'removed_item', 'project', id, project.title
+        );
+      }
+    }
   };
 
   const deleteProject = async (id: string): Promise<void> => {
+    const project = projects.find(p => p.id === id);
     await deleteProjectDoc(id);
+    if (currentUser && project) {
+      await logActivity(currentUser.uid, currentUser.name, 'deleted_project', 'project', id, project.title);
+    }
   };
 
   return {

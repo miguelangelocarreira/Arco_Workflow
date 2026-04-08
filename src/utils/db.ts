@@ -8,16 +8,18 @@ import {
   onSnapshot,
   query,
   orderBy,
+  limit,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Client, Project } from '../types';
+import { Client, Project, ActivityLog, ActivityAction } from '../types';
 
 // ── Collections ──────────────────────────────────────────────────────────────
 
 const clientsCol = collection(db, 'clients');
 const projectsCol = collection(db, 'projects');
+const activityCol = collection(db, 'activity');
 
 // ── Clients ───────────────────────────────────────────────────────────────────
 
@@ -41,7 +43,6 @@ export const subscribeProjects = (onChange: (projects: Project[]) => void) => {
   return onSnapshot(q, snapshot => {
     const projects = snapshot.docs.map(d => {
       const data = d.data();
-      // Convert Firestore Timestamp to number if needed
       const createdAt = data.createdAt instanceof Timestamp
         ? data.createdAt.toMillis()
         : (data.createdAt ?? Date.now());
@@ -62,6 +63,48 @@ export const updateProjectDoc = async (id: string, patch: Partial<Project>): Pro
 
 export const deleteProjectDoc = async (id: string): Promise<void> => {
   await deleteDoc(doc(projectsCol, id));
+};
+
+// ── Activity Log ──────────────────────────────────────────────────────────────
+
+export const logActivity = async (
+  userId: string,
+  userName: string,
+  action: ActivityAction,
+  entityType: 'project' | 'client',
+  entityId: string,
+  entityName: string,
+  details?: string
+): Promise<void> => {
+  await addDoc(activityCol, {
+    userId,
+    userName,
+    action,
+    entityType,
+    entityId,
+    entityName,
+    details: details ?? null,
+    timestamp: Date.now(),
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeActivity = (onChange: (logs: ActivityLog[]) => void, maxItems = 50) => {
+  const q = query(activityCol, orderBy('timestamp', 'desc'), limit(maxItems));
+  return onSnapshot(q, snapshot => {
+    const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ActivityLog));
+    onChange(logs);
+  });
+};
+
+export const subscribeProjectActivity = (projectId: string, onChange: (logs: ActivityLog[]) => void) => {
+  const q = query(activityCol, orderBy('timestamp', 'desc'), limit(100));
+  return onSnapshot(q, snapshot => {
+    const logs = snapshot.docs
+      .map(d => ({ id: d.id, ...d.data() } as ActivityLog))
+      .filter(l => l.entityId === projectId);
+    onChange(logs);
+  });
 };
 
 // ── Seed (first-time setup) ───────────────────────────────────────────────────

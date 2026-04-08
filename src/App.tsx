@@ -10,6 +10,7 @@ import { CreateProjectView } from './components/views/CreateProjectView';
 import { ProjectDetailView } from './components/views/ProjectDetailView';
 import { ClientsView } from './components/views/ClientsView';
 import { SearchResultsView } from './components/views/SearchResultsView';
+import { ActivityFeedView } from './components/views/ActivityFeedView';
 import { useAuth } from './hooks/useAuth';
 import { useData } from './hooks/useData';
 import { ViewType } from './types';
@@ -138,6 +139,7 @@ function App() {
             />
           )}
           {view === "clients" && <ClientsView clients={clients} createClient={createClient} setView={setView} />}
+          {view === "activity" && <ActivityFeedView setView={setView} />}
           {view === "search-results" && (
             <SearchResultsView 
               searchResults={searchResults}

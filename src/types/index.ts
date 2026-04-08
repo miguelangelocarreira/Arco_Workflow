@@ -55,4 +55,24 @@ export interface ServiceSuggestion {
   }>;
 }
 
-export type ViewType = 'menu' | 'stats' | 'projects' | 'project-detail' | 'clients' | 'create-project' | 'search-results';
+export type ViewType = 'menu' | 'stats' | 'projects' | 'project-detail' | 'clients' | 'create-project' | 'search-results' | 'activity';
+
+export type ActivityAction =
+  | 'created_project'
+  | 'deleted_project'
+  | 'changed_status'
+  | 'added_item'
+  | 'removed_item'
+  | 'created_client';
+
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  userName: string;
+  action: ActivityAction;
+  entityType: 'project' | 'client';
+  entityId: string;
+  entityName: string;
+  details?: string;
+  timestamp: number;
+}

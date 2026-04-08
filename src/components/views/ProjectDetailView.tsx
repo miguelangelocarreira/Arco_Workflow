@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Calendar,
   ChevronRight,
   Sparkles,
   Printer,
-  Trash2
+  Trash2,
+  Clock
 } from 'lucide-react';
-import { ViewType, Project, Client, User, ServiceSuggestion } from '../../types';
+import { ViewType, Project, Client, User, ServiceSuggestion, ActivityLog } from '../../types';
+import { subscribeProjectActivity } from '../../utils/db';
 import { PROJECT_STATUSES, SERVICE_SUGGESTIONS } from '../../constants/project-data';
 import { formatCurrency, calcProjectTotal } from '../../utils/formatting';
 
@@ -33,6 +35,13 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState("");
   const [qty, setQty] = useState("1");
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+
+  useEffect(() => {
+    if (!selectedProject) return;
+    const unsub = subscribeProjectActivity(selectedProject.id, setActivityLogs);
+    return () => unsub();
+  }, [selectedProject?.id]);
 
   if (!selectedProject) return null;
 
@@ -301,6 +310,33 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             >
               <Trash2 size={18} /> Apagar Projeto
             </button>
+          )}
+
+          {activityLogs.length > 0 && (
+            <div className="bg-white rounded-2xl p-4 border border-slate-100">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock size={14} className="text-slate-400" />
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Histórico</h4>
+              </div>
+              <div className="space-y-3">
+                {activityLogs.slice(0, 8).map(log => (
+                  <div key={log.id} className="flex gap-2 text-xs">
+                    <div className="w-1 h-1 rounded-full bg-slate-300 mt-1.5 shrink-0" />
+                    <div>
+                      <span className="font-bold text-slate-700">{log.userName}</span>
+                      {" "}
+                      <span className="text-slate-400">
+                        {log.action === 'changed_status' && `alterou estado${log.details ? `: ${log.details}` : ''}`}
+                        {log.action === 'created_project' && 'criou o projeto'}
+                        {log.action === 'added_item' && `adicionou: ${log.details ?? 'item'}`}
+                        {log.action === 'removed_item' && 'removeu um item'}
+                      </span>
+                      <p className="text-slate-300 mt-0.5">{new Date(log.timestamp).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>

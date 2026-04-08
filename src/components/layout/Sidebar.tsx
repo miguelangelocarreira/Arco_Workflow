@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, BarChart3, Layers, Briefcase, Users } from 'lucide-react';
+import { LogOut, BarChart3, Layers, Briefcase, Users, Activity } from 'lucide-react';
 import { ViewType } from '../../types';
 
 interface SidebarProps {
@@ -18,29 +18,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, setView, setGlobalSearch
     </div>
 
     <div className="flex-1 px-4 space-y-2 pt-4">
-      <button 
-        onClick={() => { setView('stats'); setGlobalSearchTerm(""); }} 
+      <button
+        onClick={() => { setView('stats'); setGlobalSearchTerm(""); }}
         className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${view === 'stats' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
       >
         <BarChart3 size={20} /> <span className="font-bold text-sm">Dashboard</span>
       </button>
-      <button 
-        onClick={() => { setView('projects'); setGlobalSearchTerm(""); }} 
+      <button
+        onClick={() => { setView('projects'); setGlobalSearchTerm(""); }}
         className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${view === 'projects' || view === 'project-detail' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
       >
         <Layers size={20} /> <span className="font-bold text-sm">Projetos</span>
       </button>
-      <button 
-        onClick={() => { setView('create-project'); setGlobalSearchTerm(""); }} 
+      <button
+        onClick={() => { setView('create-project'); setGlobalSearchTerm(""); }}
         className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${view === 'create-project' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
       >
         <Briefcase size={20} /> <span className="font-bold text-sm">Novo Projeto</span>
       </button>
-      <button 
-        onClick={() => { setView('clients'); setGlobalSearchTerm(""); }} 
+      <button
+        onClick={() => { setView('clients'); setGlobalSearchTerm(""); }}
         className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${view === 'clients' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
       >
         <Users size={20} /> <span className="font-bold text-sm">Clientes</span>
+      </button>
+      <button
+        onClick={() => { setView('activity'); setGlobalSearchTerm(""); }}
+        className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${view === 'activity' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+      >
+        <Activity size={20} /> <span className="font-bold text-sm">Atividade</span>
       </button>
     </div>
 
