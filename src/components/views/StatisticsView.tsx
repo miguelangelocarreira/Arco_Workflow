@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { PieChart, FileText, FolderKanban, ArrowLeft, BarChart3 } from 'lucide-react';
 import { StatCard } from '../ui/StatCard';
 import { PaidInvoicesDonut } from '../charts/PaidInvoicesDonut';
@@ -13,10 +13,35 @@ interface StatisticsViewProps {
 }
 
 export const StatisticsView: React.FC<StatisticsViewProps> = ({ currentUser, projects, clients, setView }) => {
-  const totalConcluido = projects.filter(p => p.status === "pago").reduce((acc, p) => acc + calcProjectTotal(p), 0);
-  const totalPipeline = projects.filter(p => p.status === "orçamento" || p.status === "agendado").reduce((acc, p) => acc + calcProjectTotal(p), 0);
-  const pendingInvoices = projects.filter(p => p.status === "faturar").reduce((acc, p) => acc + calcProjectTotal(p), 0);
-  const activeProjects = projects.filter(p => p.status === "work").length;
+  const totalConcluido = useMemo(
+    () => projects.filter(p => p.status === "pago").reduce((acc, p) => acc + calcProjectTotal(p), 0),
+    [projects]
+  );
+  const totalPipeline = useMemo(
+    () => projects.filter(p => p.status === "orçamento" || p.status === "agendado").reduce((acc, p) => acc + calcProjectTotal(p), 0),
+    [projects]
+  );
+  const pendingInvoices = useMemo(
+    () => projects.filter(p => p.status === "faturar").reduce((acc, p) => acc + calcProjectTotal(p), 0),
+    [projects]
+  );
+  const activeProjects = useMemo(
+    () => projects.filter(p => p.status === "work").length,
+    [projects]
+  );
+
+  const topClients = useMemo(() => {
+    const projectsByClient = new Map<string, number>();
+    for (const p of projects) {
+      if (p.status === 'pago') {
+        projectsByClient.set(p.clientId, (projectsByClient.get(p.clientId) || 0) + calcProjectTotal(p));
+      }
+    }
+    return clients
+      .map(c => ({ ...c, total: projectsByClient.get(c.id) || 0 }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 3);
+  }, [clients, projects]);
 
   return (
     <div className="p-4 md:p-10 space-y-6">
@@ -36,7 +61,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ currentUser, pro
 
       {/* Grid Principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Coluna Esquerda: Gráfico Donut (ocupa 1 coluna em desktop) */}
         <div className="lg:col-span-1">
           <PaidInvoicesDonut projects={projects} clients={clients} />
@@ -44,36 +69,30 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ currentUser, pro
 
         {/* Coluna Direita: KPIs (ocupa 2 colunas em desktop) */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard 
-            label="Pipeline" 
-            value={formatCurrency(totalPipeline)} 
-            icon={<PieChart size={20} className="text-blue-500" />} 
+          <StatCard
+            label="Pipeline"
+            value={formatCurrency(totalPipeline)}
+            icon={<PieChart size={20} className="text-blue-500" />}
             helper="Orçamentos e Agendados"
           />
-          <StatCard 
-            label="A Faturar" 
-            value={formatCurrency(pendingInvoices)} 
-            icon={<FileText size={20} className="text-purple-500" />} 
-            helper="Projetos concluídos" 
+          <StatCard
+            label="A Faturar"
+            value={formatCurrency(pendingInvoices)}
+            icon={<FileText size={20} className="text-purple-500" />}
+            helper="Projetos concluídos"
           />
-          <StatCard 
-            label="Em Produção" 
-            value={activeProjects.toString()} 
-            icon={<FolderKanban size={20} className="text-amber-500" />} 
-            helper="Projetos ativos" 
+          <StatCard
+            label="Em Produção"
+            value={activeProjects.toString()}
+            icon={<FolderKanban size={20} className="text-amber-500" />}
+            helper="Projetos ativos"
           />
-          
-          {/* Top Clientes (movido para aqui para preencher o espaço) */}
+
+          {/* Top Clientes */}
           <div className="sm:col-span-3 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm mt-2">
             <h3 className="font-bold text-slate-900 mb-4">Top Clientes (Pagos)</h3>
             <div className="space-y-4">
-              {clients.map(c => {
-                const clientTotal = projects.filter(p => p.clientId === c.id && p.status === 'pago').reduce((acc, p) => acc + calcProjectTotal(p), 0);
-                return { ...c, total: clientTotal };
-              })
-              .sort((a, b) => b.total - a.total)
-              .slice(0, 3)
-              .map((c) => {
+              {topClients.map((c) => {
                 const percentage = totalConcluido > 0 ? (c.total / totalConcluido) * 100 : 0;
                 return (
                   <div key={c.id}>
@@ -95,7 +114,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ currentUser, pro
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm min-h-[200px] flex flex-col items-center justify-center text-center p-4">
+      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm min-h-[200px] flex flex-col items-center justify-center text-center">
         <BarChart3 size={32} className="text-slate-200 mb-2" />
         <p className="text-sm text-slate-400 font-medium">Gráfico de Faturação Mensal</p>
         <span className="text-xs text-slate-300">Disponível brevemente</span>

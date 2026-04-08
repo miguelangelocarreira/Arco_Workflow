@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth } from '../firebase';
-import { GoogleAuthProvider, signInWithPopup, User as FirebaseUser } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, User as FirebaseUser, AuthError } from 'firebase/auth';
 import { User } from '../types';
 import { ADMIN_EMAIL } from '../constants/project-data';
 
@@ -21,9 +21,7 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
-    // Escutar mudanças de estado (Login/Logout)
     const unsubscribe = auth.onAuthStateChanged(firebaseUser => {
-      console.log("Estado de autenticação alterado:", firebaseUser ? firebaseUser.email : "Nenhum utilizador");
       if (firebaseUser) {
         const user = formatUser(firebaseUser);
         setCurrentUser(user);
@@ -38,12 +36,11 @@ export const useAuth = () => {
   }, []);
 
   const handleLogin = async (data: { name: string; email: string }) => {
-    // Login mock
     setAuthLoading(true);
     setAuthError("");
     const role = data.email === ADMIN_EMAIL ? "admin" : "user";
     const user: User = {
-      uid: "user-" + Date.now(),
+      uid: crypto.randomUUID(),
       name: data.name,
       email: data.email,
       role
@@ -55,19 +52,17 @@ export const useAuth = () => {
 
   const handleGoogleLogin = async () => {
     setAuthError("");
-    // Não definimos authLoading=true aqui para não esconder o botão caso o popup seja fechado
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // O sucesso é tratado pelo onAuthStateChanged
-    } catch (error: any) {
-      console.error("Erro no login Google:", error);
-      if (error.code === 'auth/popup-closed-by-user') {
+    } catch (error: unknown) {
+      const authErr = error as AuthError;
+      if (authErr.code === 'auth/popup-closed-by-user') {
         setAuthError("O login foi cancelado (janela fechada).");
-      } else if (error.code === 'auth/popup-blocked') {
+      } else if (authErr.code === 'auth/popup-blocked') {
         setAuthError("O navegador bloqueou a janela de login. Por favor, permita popups para este site.");
       } else {
-        setAuthError(error.message || "Erro ao conectar com Google.");
+        setAuthError(authErr.message || "Erro ao conectar com Google.");
       }
     }
   };

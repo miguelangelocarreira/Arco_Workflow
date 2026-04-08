@@ -4,7 +4,7 @@ import { ViewType, Client } from '../../types';
 
 interface ClientsViewProps {
   clients: Client[];
-  createClient: (payload: any) => Promise<Client>;
+  createClient: (payload: Partial<Client>) => Promise<Client>;
   setView: (view: ViewType) => void;
 }
 

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  ChevronRight, 
-  Sparkles, 
-  Printer, 
-  Trash2 
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronRight,
+  Sparkles,
+  Printer,
+  Trash2
 } from 'lucide-react';
-import { ViewType, Project, Client, User } from '../../types';
+import { ViewType, Project, Client, User, ServiceSuggestion } from '../../types';
 import { PROJECT_STATUSES, SERVICE_SUGGESTIONS } from '../../constants/project-data';
 import { formatCurrency, calcProjectTotal } from '../../utils/formatting';
 
@@ -42,20 +42,26 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   const addItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!desc || !price) return;
-    const newItem = { id: Date.now().toString(), desc, price: Number(price), qty: Number(qty) };
+    const newItem = { id: crypto.randomUUID(), desc, price: Number(price), qty: Number(qty) };
     await updateProject(p.id, { items: [...p.items, newItem] });
-    setDesc(""); 
-    setPrice(""); 
+    setDesc("");
+    setPrice("");
     setQty("1");
   };
 
-  const addSuggestion = async (suggestion: any) => {
-    const newItems = suggestion.items.map((it: any) => ({ ...it, id: Math.random().toString(36) }));
+  const addSuggestion = async (suggestion: ServiceSuggestion) => {
+    const newItems = suggestion.items.map(it => ({ ...it, id: crypto.randomUUID() }));
     await updateProject(p.id, { items: [...p.items, ...newItems] });
   };
 
   const removeItem = async (itemId: string) => {
     await updateProject(p.id, { items: p.items.filter(i => i.id !== itemId) });
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Tens a certeza que queres apagar o projeto "${p.title}"? Esta ação não pode ser desfeita.`)) return;
+    await deleteProject(p.id);
+    setView("projects");
   };
 
   const PrintTemplate = () => (
@@ -110,19 +116,19 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
       <div className="flex justify-end">
         <div className="w-1/3 text-right space-y-2">
           <div className="flex justify-between">
-            <span>Subtotal:</span> 
+            <span>Subtotal:</span>
             <span>{formatCurrency(p.items.reduce((acc, it) => acc + (it.qty * it.price), 0))}</span>
           </div>
           <div className="flex justify-between">
-            <span>Desconto:</span> 
+            <span>Desconto:</span>
             <span>{p.discount}%</span>
           </div>
           <div className="flex justify-between">
-            <span>IVA (23%):</span> 
+            <span>IVA (23%):</span>
             <span>{formatCurrency(calcProjectTotal(p) - (calcProjectTotal(p) / 1.23))}</span>
           </div>
           <div className="flex justify-between text-xl font-black border-t-2 border-black pt-2">
-            <span>Total:</span> 
+            <span>Total:</span>
             <span>{formatCurrency(calcProjectTotal(p))}</span>
           </div>
         </div>
@@ -155,10 +161,10 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                 <p className="text-xs text-slate-400">{client?.email}</p>
               </div>
               <div className="relative inline-block">
-                <select 
-                  className="appearance-none bg-slate-50 border border-slate-100 text-slate-700 text-xs font-bold py-2 pl-4 pr-10 rounded-xl uppercase hover:bg-slate-100 transition-colors cursor-pointer" 
-                  value={p.status} 
-                  onChange={e => updateProject(p.id, { status: e.target.value as any })}
+                <select
+                  className="appearance-none bg-slate-50 border border-slate-100 text-slate-700 text-xs font-bold py-2 pl-4 pr-10 rounded-xl uppercase hover:bg-slate-100 transition-colors cursor-pointer"
+                  value={p.status}
+                  onChange={e => updateProject(p.id, { status: e.target.value as Project['status'] })}
                 >
                   {PROJECT_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
@@ -196,9 +202,9 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             </div>
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
               {SERVICE_SUGGESTIONS.map(s => (
-                <button 
-                  key={s.id} 
-                  onClick={() => addSuggestion(s)} 
+                <button
+                  key={s.id}
+                  onClick={() => addSuggestion(s)}
                   className={`flex-shrink-0 p-4 rounded-2xl border flex flex-col items-start gap-2 min-w-[140px] hover:shadow-md transition-all active:scale-95 ${s.color} border-slate-100`}
                 >
                   {s.icon}
@@ -213,29 +219,29 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             <h3 className="font-bold text-slate-900 mb-4">Itens & Orçamento</h3>
 
             <form onSubmit={addItem} className="bg-slate-50 p-3 rounded-2xl mb-4 flex flex-col md:flex-row gap-2">
-              <input 
-                className="flex-[2] bg-white rounded-xl px-4 py-3 text-sm font-medium outline-none placeholder:text-slate-400" 
-                placeholder="Descrição do serviço..." 
-                value={desc} 
-                onChange={e => setDesc(e.target.value)} 
+              <input
+                className="flex-[2] bg-white rounded-xl px-4 py-3 text-sm font-medium outline-none placeholder:text-slate-400"
+                placeholder="Descrição do serviço..."
+                value={desc}
+                onChange={e => setDesc(e.target.value)}
               />
               <div className="flex gap-2">
-                <input 
-                  type="number" 
-                  className="w-16 bg-white rounded-xl px-3 py-3 text-sm outline-none" 
-                  placeholder="1" 
-                  value={qty} 
-                  onChange={e => setQty(e.target.value)} 
+                <input
+                  type="number"
+                  className="w-16 bg-white rounded-xl px-3 py-3 text-sm outline-none"
+                  placeholder="1"
+                  value={qty}
+                  onChange={e => setQty(e.target.value)}
                 />
-                <input 
-                  type="number" 
-                  className="w-24 bg-white rounded-xl px-3 py-3 text-sm outline-none" 
-                  placeholder="€" 
-                  value={price} 
-                  onChange={e => setPrice(e.target.value)} 
+                <input
+                  type="number"
+                  className="w-24 bg-white rounded-xl px-3 py-3 text-sm outline-none"
+                  placeholder="€"
+                  value={price}
+                  onChange={e => setPrice(e.target.value)}
                 />
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="bg-[#1e293b] text-white rounded-xl px-4 py-3 text-sm font-bold hover:bg-slate-700 transition-colors"
                 >
                   +
@@ -252,8 +258,8 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-sm font-bold text-slate-900">{formatCurrency(it.qty * it.price)}</span>
-                    <button 
-                      onClick={() => removeItem(it.id)} 
+                    <button
+                      onClick={() => removeItem(it.id)}
                       className="text-red-300 hover:text-red-500 text-[10px] uppercase font-bold mt-1"
                     >
                       Remover
@@ -266,11 +272,11 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             <div className="mt-8 pt-4 border-t border-slate-100 flex flex-col items-end gap-2">
               <div className="flex items-center gap-4 text-sm">
                 <span className="text-slate-400">Desconto (%)</span>
-                <input 
-                  type="number" 
-                  className="w-12 text-right bg-slate-50 rounded px-1 font-bold" 
-                  value={p.discount} 
-                  onChange={e => updateProject(p.id, { discount: Number(e.target.value) })} 
+                <input
+                  type="number"
+                  className="w-12 text-right bg-slate-50 rounded px-1 font-bold"
+                  value={p.discount}
+                  onChange={e => updateProject(p.id, { discount: Number(e.target.value) })}
                 />
               </div>
               <div className="flex items-center gap-4 text-2xl font-black text-slate-900">
@@ -282,15 +288,15 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
         </div>
 
         <div className="space-y-4">
-          <button 
-            onClick={() => window.print()} 
+          <button
+            onClick={() => window.print()}
             className="w-full bg-[#1e293b] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 hover:bg-slate-800 transition-all active:scale-[0.98]"
           >
             <Printer size={18} /> Exportar PDF
           </button>
           {isAdmin && (
-            <button 
-              onClick={() => deleteProject(p.id)} 
+            <button
+              onClick={handleDelete}
               className="w-full bg-red-50 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-100 transition-all active:scale-[0.98]"
             >
               <Trash2 size={18} /> Apagar Projeto

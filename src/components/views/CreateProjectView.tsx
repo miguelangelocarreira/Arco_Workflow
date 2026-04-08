@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
-import { ViewType, Client } from '../../types';
+import { ViewType, Client, Project } from '../../types';
 
 interface CreateProjectViewProps {
   clients: Client[];
-  createProject: (payload: any) => Promise<any>;
+  createProject: (payload: Partial<Project>) => Promise<Project>;
   setView: (view: ViewType) => void;
   setSelectedProjectId: (id: string) => void;
 }

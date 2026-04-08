@@ -11,6 +11,14 @@ export const formatCurrency = (value: number): string => {
   }
 };
 
-export const sanitize = (s: string): string => (s || "").replace(/[<>]/g, "");
+export const sanitize = (s: string): string => {
+  if (!s) return "";
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+};
 
 export { calcProjectTotal };

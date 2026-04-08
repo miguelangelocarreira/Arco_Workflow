@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Client, Project, ProjectItem } from '../types';
+import { Client, Project, User } from '../types';
 import { storage } from '../utils/storage';
 import { generateLeiriaData } from '../utils/sample-data';
 import { sanitize } from '../utils/formatting';
 
-export const useData = (currentUser: any) => {
+export const useData = (currentUser: User | null) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   const persistData = (newClients: Client[], newProjects: Project[]) => {
     storage.set("aw_clients", newClients);
@@ -16,21 +17,25 @@ export const useData = (currentUser: any) => {
 
   const loadData = useCallback(async () => {
     setLoadingData(true);
-    
-    let loadedClients = storage.get("aw_clients") || [];
-    let loadedProjects = storage.get("aw_projects") || [];
+    setDataError(null);
+    try {
+      let loadedClients: Client[] = storage.get("aw_clients") || [];
+      let loadedProjects: Project[] = storage.get("aw_projects") || [];
 
-    // Auto-seed if empty
-    if (loadedClients.length === 0) {
-      const { clients: seedC, projects: seedP } = generateLeiriaData();
-      loadedClients = seedC;
-      loadedProjects = seedP;
-      persistData(seedC, seedP);
+      if (loadedClients.length === 0) {
+        const { clients: seedC, projects: seedP } = generateLeiriaData();
+        loadedClients = seedC;
+        loadedProjects = seedP;
+        persistData(seedC, seedP);
+      }
+
+      setClients(loadedClients);
+      setProjects(loadedProjects);
+    } catch {
+      setDataError("Erro ao carregar dados.");
+    } finally {
+      setLoadingData(false);
     }
-
-    setClients(loadedClients);
-    setProjects(loadedProjects);
-    setLoadingData(false);
   }, []);
 
   useEffect(() => {
@@ -39,9 +44,9 @@ export const useData = (currentUser: any) => {
     }
   }, [currentUser, loadData]);
 
-  const createClient = async (payload: Partial<Client>) => {
+  const createClient = async (payload: Partial<Client>): Promise<Client> => {
     const clientBase: Client = {
-      id: "local-c-" + Date.now(),
+      id: "local-c-" + crypto.randomUUID(),
       name: sanitize(payload.name || ""),
       email: sanitize(payload.email || ""),
       phone: sanitize(payload.phone || ""),
@@ -58,9 +63,9 @@ export const useData = (currentUser: any) => {
     return clientBase;
   };
 
-  const createProject = async (payload: Partial<Project>) => {
+  const createProject = async (payload: Partial<Project>): Promise<Project> => {
     const projectBase: Project = {
-      id: "local-p-" + Date.now(),
+      id: "local-p-" + crypto.randomUUID(),
       clientId: payload.clientId || "",
       title: sanitize(payload.title || ""),
       status: payload.status || "orçamento",
@@ -81,11 +86,11 @@ export const useData = (currentUser: any) => {
   const updateProject = async (id: string, patch: Partial<Project>) => {
     const idx = projects.findIndex((p) => p.id === id);
     if (idx === -1) return;
-    
+
     const updated = { ...projects[idx], ...patch };
     const nextProjects = [...projects];
     nextProjects[idx] = updated;
-    
+
     setProjects(nextProjects);
     persistData(clients, nextProjects);
   };
@@ -100,6 +105,7 @@ export const useData = (currentUser: any) => {
     clients,
     projects,
     loadingData,
+    dataError,
     createClient,
     createProject,
     updateProject,

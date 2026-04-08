@@ -1,13 +1,13 @@
 export const storage = {
-  get: (key: string) => {
+  get: <T = unknown>(key: string): T | null => {
     try {
       const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : null;
+      return item ? (JSON.parse(item) as T) : null;
     } catch {
       return null;
     }
   },
-  set: (key: string, val: any) => {
+  set: (key: string, val: unknown) => {
     try {
       localStorage.setItem(key, JSON.stringify(val));
     } catch {}

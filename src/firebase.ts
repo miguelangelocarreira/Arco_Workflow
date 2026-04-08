@@ -2,12 +2,12 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAc_AA-eVoBy-8nOIiAd4jm5YPlZ6MM5HM",
-  authDomain: "arcoworkflow-09203615-de0d1.firebaseapp.com",
-  projectId: "arcoworkflow-09203615-de0d1",
-  storageBucket: "arcoworkflow-09203615-de0d1.firebasestorage.app",
-  messagingSenderId: "412018727946",
-  appId: "1:412018727946:web:82a8db3d07074f8cfb13f3"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
