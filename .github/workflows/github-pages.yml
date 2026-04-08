@@ -6,20 +6,11 @@ on:
       - claude/code-review-TJ4Rh
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  contents: write
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -42,9 +33,8 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: 412018727946
           VITE_FIREBASE_APP_ID: 1:412018727946:web:82a8db3d07074f8cfb13f3
 
-      - uses: actions/upload-pages-artifact@v3
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: dist
-
-      - uses: actions/deploy-pages@v4
-        id: deployment
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
