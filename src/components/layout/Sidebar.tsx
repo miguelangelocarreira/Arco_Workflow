@@ -1,16 +1,17 @@
 import React from 'react';
-import { LogOut, BarChart3, Layers, Briefcase, Users, Activity } from 'lucide-react';
-import { ViewType } from '../../types';
+import { LogOut, BarChart3, Layers, Briefcase, Users, Settings } from 'lucide-react';
+import { ViewType, User } from '../../types';
 
 interface SidebarProps {
   view: ViewType;
+  currentUser: User | null;
   setView: (view: ViewType) => void;
   setGlobalSearchTerm: (term: string) => void;
   handleLogout: () => void;
   handleLogoClick: (e: React.MouseEvent) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ view, setView, setGlobalSearchTerm, handleLogout, handleLogoClick }) => (
+export const Sidebar: React.FC<SidebarProps> = ({ view, currentUser, setView, setGlobalSearchTerm, handleLogout, handleLogoClick }) => (
   <div className="hidden md:flex flex-col w-64 bg-[#1e293b] h-screen fixed left-0 top-0 z-50 shadow-2xl">
     <div className="p-8 flex items-center gap-2 h-[80px] cursor-pointer hover:opacity-90 transition-opacity" onClick={handleLogoClick}>
       <span className="text-3xl font-black text-white tracking-tighter font-sans">ARCO</span>
@@ -42,15 +43,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, setView, setGlobalSearch
       >
         <Users size={20} /> <span className="font-bold text-sm">Clientes</span>
       </button>
+    </div>
+
+    <div className="px-4 pb-2">
       <button
-        onClick={() => { setView('activity'); setGlobalSearchTerm(""); }}
-        className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${view === 'activity' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+        onClick={() => { setView('settings'); setGlobalSearchTerm(""); }}
+        className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${view === 'settings' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
       >
-        <Activity size={20} /> <span className="font-bold text-sm">Atividade</span>
+        <Settings size={20} /> <span className="font-bold text-sm">Configurações</span>
       </button>
     </div>
 
     <div className="p-6 border-t border-white/10">
+      <div className="text-xs text-slate-500 mb-3 truncate">{currentUser?.email}</div>
       <button onClick={handleLogout} className="text-slate-400 hover:text-white text-xs font-bold flex items-center gap-2">
         <LogOut size={14} /> Sair do Sistema
       </button>

@@ -1,7 +1,9 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
+  setDoc,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -13,13 +15,14 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Client, Project, ActivityLog, ActivityAction } from '../types';
+import { Client, Project, ActivityLog, ActivityAction, UserProfile, CompanySettings, PipelineStatus } from '../types';
 
 // ── Collections ──────────────────────────────────────────────────────────────
 
 const clientsCol = collection(db, 'clients');
 const projectsCol = collection(db, 'projects');
 const activityCol = collection(db, 'activity');
+const usersCol = collection(db, 'users');
 
 // ── Clients ───────────────────────────────────────────────────────────────────
 
@@ -104,6 +107,69 @@ export const subscribeProjectActivity = (projectId: string, onChange: (logs: Act
       .map(d => ({ id: d.id, ...d.data() } as ActivityLog))
       .filter(l => l.entityId === projectId);
     onChange(logs);
+  });
+};
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+
+export const upsertUserProfile = async (profile: UserProfile): Promise<void> => {
+  const ref = doc(usersCol, profile.uid);
+  const existing = await getDoc(ref);
+  if (existing.exists()) {
+    await updateDoc(ref, { lastLoginAt: profile.lastLoginAt, name: profile.name });
+  } else {
+    await setDoc(ref, profile);
+  }
+};
+
+export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
+  const snap = await getDoc(doc(usersCol, uid));
+  return snap.exists() ? (snap.data() as UserProfile) : null;
+};
+
+export const subscribeUsers = (onChange: (users: UserProfile[]) => void) => {
+  const q = query(usersCol, orderBy('createdAt', 'asc'));
+  return onSnapshot(q, snapshot => {
+    const users = snapshot.docs.map(d => d.data() as UserProfile);
+    onChange(users);
+  });
+};
+
+export const updateUserProfile = async (uid: string, patch: Partial<UserProfile>): Promise<void> => {
+  await updateDoc(doc(usersCol, uid), patch as Record<string, unknown>);
+};
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+const settingsDoc = (key: string) => doc(db, 'settings', key);
+
+export const getCompanySettings = async (): Promise<CompanySettings | null> => {
+  const snap = await getDoc(settingsDoc('company'));
+  return snap.exists() ? (snap.data() as CompanySettings) : null;
+};
+
+export const saveCompanySettings = async (data: CompanySettings): Promise<void> => {
+  await setDoc(settingsDoc('company'), data);
+};
+
+export const subscribeCompanySettings = (onChange: (s: CompanySettings | null) => void) => {
+  return onSnapshot(settingsDoc('company'), snap => {
+    onChange(snap.exists() ? (snap.data() as CompanySettings) : null);
+  });
+};
+
+export const getPipelineSettings = async (): Promise<PipelineStatus[] | null> => {
+  const snap = await getDoc(settingsDoc('pipeline'));
+  return snap.exists() ? (snap.data().statuses as PipelineStatus[]) : null;
+};
+
+export const savePipelineSettings = async (statuses: PipelineStatus[]): Promise<void> => {
+  await setDoc(settingsDoc('pipeline'), { statuses });
+};
+
+export const subscribePipelineSettings = (onChange: (s: PipelineStatus[]) => void, defaults: PipelineStatus[]) => {
+  return onSnapshot(settingsDoc('pipeline'), snap => {
+    onChange(snap.exists() ? (snap.data().statuses as PipelineStatus[]) : defaults);
   });
 };
 

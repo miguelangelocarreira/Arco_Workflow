@@ -10,7 +10,7 @@ import { CreateProjectView } from './components/views/CreateProjectView';
 import { ProjectDetailView } from './components/views/ProjectDetailView';
 import { ClientsView } from './components/views/ClientsView';
 import { SearchResultsView } from './components/views/SearchResultsView';
-import { ActivityFeedView } from './components/views/ActivityFeedView';
+import { SettingsView } from './components/views/SettingsView';
 import { useAuth } from './hooks/useAuth';
 import { useData } from './hooks/useData';
 import { ViewType } from './types';
@@ -80,10 +80,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex font-sans text-slate-900">
-      <Sidebar 
-        view={view} 
-        setView={setView} 
-        setGlobalSearchTerm={setGlobalSearchTerm} 
+      <Sidebar
+        view={view}
+        currentUser={currentUser}
+        setView={setView}
+        setGlobalSearchTerm={setGlobalSearchTerm}
         handleLogout={handleLogout}
         handleLogoClick={handleLogoClick}
       />
@@ -139,7 +140,7 @@ function App() {
             />
           )}
           {view === "clients" && <ClientsView clients={clients} createClient={createClient} setView={setView} />}
-          {view === "activity" && <ActivityFeedView setView={setView} />}
+          {view === "settings" && <SettingsView currentUser={currentUser} setView={setView} />}
           {view === "search-results" && (
             <SearchResultsView 
               searchResults={searchResults}

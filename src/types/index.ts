@@ -5,6 +5,32 @@ export interface User {
   role: 'admin' | 'user';
 }
 
+export interface UserProfile {
+  uid: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  active: boolean;
+  createdAt: number;
+  lastLoginAt: number;
+}
+
+export interface CompanySettings {
+  name: string;
+  nif: string;
+  address: string;
+  zip: string;
+  city: string;
+  phone: string;
+  email: string;
+}
+
+export interface PipelineStatus {
+  id: string;
+  label: string;
+  color: string;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -55,7 +81,15 @@ export interface ServiceSuggestion {
   }>;
 }
 
-export type ViewType = 'menu' | 'stats' | 'projects' | 'project-detail' | 'clients' | 'create-project' | 'search-results' | 'activity';
+export type ViewType =
+  | 'menu'
+  | 'stats'
+  | 'projects'
+  | 'project-detail'
+  | 'clients'
+  | 'create-project'
+  | 'search-results'
+  | 'settings';
 
 export type ActivityAction =
   | 'created_project'

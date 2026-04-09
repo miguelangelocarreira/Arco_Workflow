@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { User } from '../types';
 import { ADMIN_EMAIL } from '../constants/project-data';
+import { upsertUserProfile, getUserProfile } from '../utils/db';
 
 export const useAuth = () => {
   const [authLoading, setAuthLoading] = useState(true);
@@ -27,9 +28,32 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(firebaseUser => {
+    const unsubscribe = auth.onAuthStateChanged(async firebaseUser => {
       if (firebaseUser) {
-        setCurrentUser(formatUser(firebaseUser));
+        const user = formatUser(firebaseUser);
+
+        // Check if user is deactivated in Firestore
+        const profile = await getUserProfile(firebaseUser.uid);
+        if (profile && profile.active === false) {
+          await auth.signOut();
+          setCurrentUser(null);
+          setAuthLoading(false);
+          setAuthError("A tua conta foi desativada. Contacta o administrador.");
+          return;
+        }
+
+        // Upsert user profile in Firestore
+        await upsertUserProfile({
+          uid: user.uid,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          active: true,
+          createdAt: profile?.createdAt ?? Date.now(),
+          lastLoginAt: Date.now(),
+        });
+
+        setCurrentUser(user);
         setShowSplash(true);
       } else {
         setCurrentUser(null);
