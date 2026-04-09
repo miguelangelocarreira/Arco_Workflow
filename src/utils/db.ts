@@ -194,6 +194,13 @@ export const subscribeClientQuotes = (clientId: string, onChange: (quotes: Quote
   });
 };
 
+export const subscribeAllQuotes = (onChange: (quotes: Quote[]) => void) => {
+  const q = query(quotesCol, orderBy('createdAt', 'desc'), limit(500));
+  return onSnapshot(q, snapshot => {
+    onChange(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Quote)));
+  });
+};
+
 export const createQuoteDoc = async (payload: Omit<Quote, 'id'>): Promise<Quote> => {
   const ref = await addDoc(quotesCol, payload);
   return { id: ref.id, ...payload };

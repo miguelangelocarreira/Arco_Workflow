@@ -21,7 +21,7 @@ import { ViewType, Quote } from './types';
 function App() {
   const { authLoading, authError, currentUser, showSplash, setShowSplash, resetSent, handleLogin, handleForgotPassword, handleLogout } = useAuth();
   const { clients, projects, loadingData, createClient, createProject, updateProject, deleteProject } = useData(currentUser);
-  const { quoteSettings, savingSettings, createQuote, updateQuote, deleteQuote, updateQuoteSettings } = useQuotes(currentUser);
+  const { quotes, quoteSettings, savingSettings, createQuote, updateQuote, deleteQuote, updateQuoteSettings } = useQuotes(currentUser);
 
   // VIEW STATES
   const [view, setView] = useState<ViewType>("menu");
@@ -132,7 +132,7 @@ function App() {
           )}
 
           {view === "menu" && <MainMenuView setView={setView} setFilterStatus={setFilterStatus} onNewQuote={() => handleNewQuote()} />}
-          {view === "stats" && <StatisticsView currentUser={currentUser} projects={projects} clients={clients} setView={setView} />}
+          {view === "stats" && <StatisticsView currentUser={currentUser} projects={projects} clients={clients} quotes={quotes} setView={setView} />}
           {view === "projects" && (
             <ProjectsView
               projects={projects} clients={clients}

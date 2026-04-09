@@ -5,16 +5,23 @@ import {
   updateQuoteDoc,
   deleteQuoteDoc,
   subscribeQuoteSettings,
+  subscribeAllQuotes,
   saveQuoteSettings,
   DEFAULT_QUOTE_SETTINGS,
 } from '../utils/db';
 
 export const useQuotes = (currentUser: User | null) => {
+  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [quoteSettings, setQuoteSettings] = useState<QuoteSettings>(DEFAULT_QUOTE_SETTINGS);
   const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeQuoteSettings(setQuoteSettings);
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeAllQuotes(setQuotes);
     return () => unsub();
   }, []);
 
@@ -48,5 +55,5 @@ export const useQuotes = (currentUser: User | null) => {
     }
   };
 
-  return { quoteSettings, savingSettings, createQuote, updateQuote, deleteQuote, updateQuoteSettings };
+  return { quotes, quoteSettings, savingSettings, createQuote, updateQuote, deleteQuote, updateQuoteSettings };
 };
