@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, Settings } from 'lucide-react';
 import { User, ViewType } from '../../types';
 
 interface TopBarProps {
@@ -20,6 +20,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   setGlobalSearchTerm,
   isSearchExpanded,
   setIsSearchExpanded,
+  setView,
   handleLogoClick
 }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -32,12 +33,20 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   return (
     <div className="bg-white px-6 py-4 sticky top-0 z-40 flex items-center justify-between h-[80px] border-b border-slate-50">
-      <div 
-        className="flex items-center gap-1 md:hidden cursor-pointer active:scale-95 transition-transform" 
-        onClick={handleLogoClick}
-      >
-        <span className="text-2xl font-black text-slate-900 tracking-tighter">ARCO</span>
-        <div className="h-1.5 w-1.5 rounded-full bg-orange-500 mt-1.5"></div>
+      <div className="flex items-center gap-3 md:hidden">
+        <div
+          className="flex items-center gap-1 cursor-pointer active:scale-95 transition-transform"
+          onClick={handleLogoClick}
+        >
+          <span className="text-2xl font-black text-slate-900 tracking-tighter">ARCO</span>
+          <div className="h-1.5 w-1.5 rounded-full bg-orange-500 mt-1.5"></div>
+        </div>
+        <button
+          onClick={() => setView('settings')}
+          className="p-2 text-slate-400 hover:text-slate-700 transition-colors"
+        >
+          <Settings size={20} />
+        </button>
       </div>
 
       <div className={`flex items-center justify-end transition-all duration-300 ${isSearchExpanded ? 'flex-1 ml-4' : ''}`}>

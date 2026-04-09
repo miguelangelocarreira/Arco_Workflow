@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, BarChart3, Layers, FolderOpen, UserPlus } from 'lucide-react';
+import { Briefcase, BarChart3, Layers, FolderOpen, UserPlus, Settings } from 'lucide-react';
 import { ViewType } from '../../types';
 
 interface MainMenuViewProps {
@@ -64,12 +64,20 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({ setView, setFilterSt
         </button>
       </div>
       
-      <button 
-        onClick={() => setView("clients")} 
-        className="w-full bg-slate-100 rounded-[1.5rem] py-4 px-6 flex items-center justify-center gap-2 text-[#1e293b] font-bold text-sm hover:bg-slate-200 active:scale-[0.98] transition-all min-h-[56px]"
-      >
-        <UserPlus size={18} /> Adicionar Cliente
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={() => setView("clients")}
+          className="flex-1 bg-slate-100 rounded-[1.5rem] py-4 px-6 flex items-center justify-center gap-2 text-[#1e293b] font-bold text-sm hover:bg-slate-200 active:scale-[0.98] transition-all min-h-[56px]"
+        >
+          <UserPlus size={18} /> Clientes
+        </button>
+        <button
+          onClick={() => setView("settings")}
+          className="bg-slate-100 rounded-[1.5rem] py-4 px-5 flex items-center justify-center text-[#1e293b] hover:bg-slate-200 active:scale-[0.98] transition-all min-h-[56px]"
+        >
+          <Settings size={18} />
+        </button>
+      </div>
     </div>
   </div>
 );
