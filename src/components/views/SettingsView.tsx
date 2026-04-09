@@ -346,6 +346,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
+          {/* Condições da proposta */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-1">Condições da Proposta</h3>
+            <p className="text-xs text-slate-400 mb-4">Texto que aparece no rodapé do PDF. Deixa em branco para omitir.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {([
+                ['pagamento',    'Pagamento'],
+                ['entrega',      'Entrega'],
+                ['revisoes',     'Revisões'],
+                ['cancelamento', 'Cancelamento'],
+              ] as [keyof NonNullable<typeof pricingForm.conditions>, string][]).map(([key, label]) => (
+                <div key={key}>
+                  <label className={labelCls}>{label}</label>
+                  <textarea
+                    rows={2}
+                    className={`${inputCls} resize-none`}
+                    placeholder={`Condição de ${label.toLowerCase()}...`}
+                    value={pricingForm.conditions?.[key] ?? ''}
+                    onChange={e => setPricingForm(f => ({ ...f, conditions: { ...f.conditions, [key]: e.target.value } }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Parâmetros do PDF */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Parâmetros do PDF</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className={labelCls}>IVA (%)</label>
+                <input type="number" min={0} max={100} className={inputCls}
+                  value={Math.round((pricingForm.vatRate ?? 0.23) * 100)}
+                  onChange={e => setPricingForm(f => ({ ...f, vatRate: (+e.target.value || 0) / 100 }))} />
+              </div>
+              <div>
+                <label className={labelCls}>Validade da proposta (dias)</label>
+                <input type="number" min={1} className={inputCls}
+                  value={pricingForm.validityDays ?? 30}
+                  onChange={e => setPricingForm(f => ({ ...f, validityDays: +e.target.value || 30 }))} />
+              </div>
+              <div>
+                <label className={labelCls}>Arquivo de originais (meses)</label>
+                <input type="number" min={1} className={inputCls}
+                  value={pricingForm.archiveMonths ?? 6}
+                  onChange={e => setPricingForm(f => ({ ...f, archiveMonths: +e.target.value || 6 }))} />
+              </div>
+            </div>
+          </div>
+
           <button
             onClick={() => updateQuoteSettings(pricingForm)}
             disabled={savingQuoteSettings}

@@ -177,7 +177,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     if (form.uso === 'tv_ooh') {
       setIsNegotiable(true);
       setTotal(0);
-      setBreakdown([{ label: 'TV / OOH / Licença Alargada — a negociar', val: '—' }]);
+      setBreakdown([{ label: 'TV / OOH / Licença Alargada', val: '—', detail: 'A negociar individualmente' }]);
       return;
     }
     setIsNegotiable(false);
@@ -195,12 +195,15 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     const descontoVal = subtotal * (form.desconto / 100);
     const final = subtotal - descontoVal;
 
-    const bd: QuoteBreakdownItem[] = [{ label: `Base (${form.quantidade}× ${svcInfo?.unit ?? ''})`, val: base }];
-    if (useMult !== 1) bd.push({ label: `Multiplicador de uso (×${useMult})`, val: comUso - base });
-    if (urgFrac > 0) bd.push({ label: `Urgência (+${urgFrac * 100}%)`, val: comUrg - comUso });
-    if (desl > 0) bd.push({ label: 'Deslocação', val: desl });
-    if (revExtra > 0) bd.push({ label: `Revisões extra (${form.revisoes - 1}×)`, val: revExtra });
-    if (form.desconto > 0) bd.push({ label: `Desconto (${form.desconto}%)`, val: -descontoVal });
+    const usoLabel = form.uso === 'digital_organico' ? 'Digital Orgânico' : 'Campanha Paga / Ads';
+    const bd: QuoteBreakdownItem[] = [
+      { label: svcInfo?.label ?? form.servico, val: base, detail: `${form.quantidade}× ${svcInfo?.unit ?? ''}` },
+    ];
+    if (useMult !== 1) bd.push({ label: 'Multiplicador de uso', val: comUso - base, detail: `×${useMult} — ${usoLabel}` });
+    if (urgFrac > 0) bd.push({ label: 'Urgência', val: comUrg - comUso, detail: `+${urgFrac * 100}%` });
+    if (desl > 0) bd.push({ label: 'Deslocação', val: desl, detail: `${form.deslocacaoKm} km` });
+    if (revExtra > 0) bd.push({ label: 'Revisões adicionais', val: revExtra, detail: `${form.revisoes - 1} ronda${form.revisoes > 2 ? 's' : ''} extra` });
+    if (form.desconto > 0) bd.push({ label: 'Desconto', val: -descontoVal, detail: `${form.desconto}%` });
     setBreakdown(bd);
     setTotal(final);
   }
@@ -209,7 +212,11 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     setIsNegotiable(false);
     const monthly = Number(form.precoAvenca) || 0;
     const t = monthly * form.duracao;
-    setBreakdown([{ label: `${formatCurrency(monthly)} × ${form.duracao} meses`, val: t }]);
+    setBreakdown([{
+      label: 'Pacote de conteúdos mensais',
+      val: t,
+      detail: `${formatCurrency(monthly)}/mês × ${form.duracao} meses`,
+    }]);
     setTotal(t);
   }
 
@@ -316,56 +323,142 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   );
 
   // ── Print template ───────────────────────────────────────────────────────────
-  const PrintTemplate = () => (
-    <div className="hidden print:block p-12 font-sans">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <div className="text-3xl font-black tracking-tight">ARCO<span className="text-orange-500">.</span></div>
-          <p className="text-xs text-gray-400 mt-1">arcodavelha.com</p>
+  const PrintTemplate = () => {
+    const vatRate = quoteSettings.vatRate ?? 0.23;
+    const archiveMonths = quoteSettings.archiveMonths ?? 6;
+    const validityDays = quoteSettings.validityDays ?? 30;
+    const conds = quoteSettings.conditions ?? {};
+
+    const vatAmount = isNegotiable ? 0 : total * vatRate;
+    const totalWithVat = isNegotiable ? 0 : total + vatAmount;
+
+    const year = selectedQuote ? new Date(selectedQuote.createdAt).getFullYear() : new Date().getFullYear();
+    const seq = selectedQuote
+      ? String(parseInt(selectedQuote.id.slice(-3), 16) % 1000).padStart(3, '0')
+      : '000';
+    const ref = `AVP-${year}-${seq}`;
+
+    const scope = mode === 'avenca'
+      ? 'Avença de Conteúdos Mensais'
+      : (svcInfo?.label ?? '');
+
+    const condCards = ([
+      { label: 'Pagamento',    value: conds.pagamento },
+      { label: 'Entrega',      value: conds.entrega },
+      { label: 'Revisões',     value: conds.revisoes },
+      { label: 'Cancelamento', value: conds.cancelamento },
+    ] as { label: string; value: string | undefined }[]).filter(c => c.value);
+
+    const s = {
+      wrap:     { fontFamily: 'system-ui,-apple-system,sans-serif', color: '#1e293b', maxWidth: 680, margin: '0 auto', padding: '2rem 1.5rem' } as React.CSSProperties,
+      muted:    { color: '#94a3b8' } as React.CSSProperties,
+      label:    { fontSize: 11, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.05em', fontWeight: 500, margin: '0 0 4px 0' },
+      card:     { backgroundColor: '#f8fafc', borderRadius: 8, padding: '12px 14px' } as React.CSSProperties,
+    };
+
+    return (
+      <div className="hidden print:block" style={s.wrap}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.02em', lineHeight: 1 }}>
+              ARCO<span style={{ color: '#f97316' }}>.</span>
+            </div>
+            <p style={{ fontSize: 12, ...s.muted, marginTop: 4 }}>arcodavelha.com</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <p style={s.label}>Proposta Comercial</p>
+            <p style={{ fontSize: 13, fontWeight: 500, margin: '4px 0 2px' }}>Ref: {ref}</p>
+            <p style={{ fontSize: 12, ...s.muted }}>
+              {new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </p>
+          </div>
         </div>
-        <div className="text-right text-sm text-gray-500">
-          <p>Data: {new Date().toLocaleDateString('pt-PT')}</p>
-          <p>Ref: {selectedQuote?.id?.slice(-6).toUpperCase() ?? 'NOVO'}</p>
+
+        {/* Client + scope bar */}
+        {selectedClient && (
+          <div style={{ ...s.card, marginBottom: 28 }}>
+            <p style={{ fontSize: 13, margin: '0 0 4px 0' }}>
+              <span style={s.muted}>Para: </span>{selectedClient.name}
+              {selectedClient.nif && <span style={s.muted}> · NIF {selectedClient.nif}</span>}
+            </p>
+            <p style={{ fontSize: 13, margin: 0 }}>
+              <span style={s.muted}>Âmbito: </span>{scope}
+            </p>
+          </div>
+        )}
+
+        {/* Line items */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid #e2e8f0', marginBottom: 4 }}>
+            <span style={s.label}>Descrição</span>
+            <span style={s.label}>Valor</span>
+          </div>
+          {breakdown.map((row, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>{row.label}</p>
+                {row.detail && <p style={{ fontSize: 12, ...s.muted, margin: '2px 0 0' }}>{row.detail}</p>}
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', marginLeft: 24, color: typeof row.val === 'number' && row.val < 0 ? '#10b981' : '#1e293b' }}>
+                {typeof row.val === 'number' ? formatCurrency(row.val) : row.val}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Totals block */}
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', marginBottom: 28 }}>
+          {isNegotiable ? (
+            <div style={{ padding: '14px 16px' }}>
+              <p style={s.label}>Total</p>
+              <p style={{ fontSize: 22, fontWeight: 500, margin: 0 }}>A negociar</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                <div style={{ padding: '14px 16px', borderRight: '1px solid #e2e8f0' }}>
+                  <p style={s.label}>Total s/ IVA</p>
+                  <p style={{ fontSize: 18, fontWeight: 500, margin: 0 }}>{formatCurrency(total)}</p>
+                </div>
+                <div style={{ padding: '14px 16px' }}>
+                  <p style={s.label}>IVA {Math.round(vatRate * 100)}%</p>
+                  <p style={{ fontSize: 18, fontWeight: 500, margin: 0 }}>{formatCurrency(vatAmount)}</p>
+                </div>
+              </div>
+              <div style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ ...s.label, margin: 0 }}>Total c/ IVA</p>
+                <p style={{ fontSize: 22, fontWeight: 500, margin: 0 }}>{formatCurrency(totalWithVat)}</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Conditions grid */}
+        {condCards.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 28 }}>
+            {condCards.map(({ label, value }) => (
+              <div key={label} style={s.card}>
+                <p style={s.label}>{label}</p>
+                <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>{value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ borderTop: '0.5px solid #e2e8f0', paddingTop: 16 }}>
+          <p style={{ fontSize: 12, ...s.muted, margin: '0 0 4px' }}>
+            Os ficheiros produzidos são propriedade do cliente após liquidação total. Originais em arquivo no estúdio por {archiveMonths} meses após entrega.
+          </p>
+          <p style={{ fontSize: 12, ...s.muted, margin: 0 }}>
+            Proposta válida por {validityDays} dias. Este documento é uma proposta comercial e não constitui fatura.
+          </p>
         </div>
       </div>
-      {selectedClient && (
-        <div className="mb-6 p-4 bg-gray-50 rounded">
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Cliente</p>
-          <p className="font-bold">{selectedClient.name}</p>
-          {selectedClient.nif && <p className="text-sm text-gray-500">NIF: {selectedClient.nif}</p>}
-          {selectedClient.email && <p className="text-sm text-gray-500">{selectedClient.email}</p>}
-        </div>
-      )}
-      <h2 className="text-lg font-bold mb-4">{mode === 'avenca' ? 'Proposta de Avença' : `Proposta — ${svcInfo?.label ?? ''}`}</h2>
-      <table className="w-full text-sm mb-6 border-collapse">
-        <thead>
-          <tr className="border-b border-gray-200">
-            <th className="text-left py-2 text-gray-500 font-medium">Descrição</th>
-            <th className="text-right py-2 text-gray-500 font-medium">Valor</th>
-          </tr>
-        </thead>
-        <tbody>
-          {breakdown.map((row, i) => (
-            <tr key={i} className="border-b border-gray-100">
-              <td className="py-2 text-gray-700">{row.label}</td>
-              <td className="py-2 text-right font-medium">
-                {typeof row.val === 'number' ? formatCurrency(row.val) : row.val}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td className="py-3 font-black text-lg">Total {mode === 'avenca' ? 'do Período' : 's/ IVA'}</td>
-            <td className="py-3 text-right font-black text-lg">
-              {isNegotiable ? 'A negociar' : formatCurrency(total)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-      <p className="text-xs text-gray-400 mt-12">Este documento é uma proposta comercial e não constitui fatura.</p>
-    </div>
-  );
+    );
+  };
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (

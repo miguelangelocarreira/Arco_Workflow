@@ -114,12 +114,22 @@ export interface QuoteSettings {
     reels_social?: string;
     campanha_completa?: string;
   };
+  conditions?: {
+    pagamento?: string;
+    entrega?: string;
+    revisoes?: string;
+    cancelamento?: string;
+  };
+  vatRate?: number;
+  archiveMonths?: number;
+  validityDays?: number;
   updatedAt?: number;
 }
 
 export interface QuoteBreakdownItem {
   label: string;
   val: number | string;
+  detail?: string;
 }
 
 export interface Quote {

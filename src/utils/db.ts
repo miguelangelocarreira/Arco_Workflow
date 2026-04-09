@@ -219,6 +219,15 @@ export const DEFAULT_QUOTE_SETTINGS: QuoteSettings = {
   urgency: { short: 0.2, extreme: 0.3 },
   travel: { perKm: 0.35, fixedFee: 50 },
   revisionCost: 80,
+  vatRate: 0.23,
+  archiveMonths: 6,
+  validityDays: 30,
+  conditions: {
+    pagamento: '50% na assinatura, 50% na entrega.',
+    entrega: 'Conforme calendário acordado no briefing.',
+    revisoes: '2 rondas incluídas. Rondas adicionais faturadas separadamente.',
+    cancelamento: 'Cancelamento com menos de 48h implica retenção do sinal.',
+  },
 };
 
 export const subscribeQuoteSettings = (onChange: (s: QuoteSettings) => void) => {
