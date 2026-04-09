@@ -123,6 +123,9 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     precoAvenca: selectedQuote?.precoAvenca ?? 0,
     avencaItens: selectedQuote?.avencaItens ?? {} as Record<string, number>,
     notas: selectedQuote?.notas ?? '',
+    servicoCustomLabel: selectedQuote?.servicoCustomLabel ?? '',
+    servicoCustomUnit: selectedQuote?.servicoCustomUnit ?? 'un.',
+    servicoCustomPrice: selectedQuote?.servicoCustomPrice ?? 0,
   });
   const upd = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm(f => ({ ...f, [k]: v }));
 
@@ -142,7 +145,16 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const [statusChanging, setStatusChanging] = useState(false);
 
   const selectedClient = useMemo(() => clients.find(c => c.id === clientId), [clients, clientId]);
-  const svcInfo = SERVICE_INFO[form.servico];
+
+  const svcInfo = useMemo(() => {
+    if (form.servico === 'personalizado') {
+      return { label: form.servicoCustomLabel || 'Personalizado', unit: form.servicoCustomUnit || 'un.', docs: [] as string[] };
+    }
+    const base = SERVICE_INFO[form.servico];
+    if (!base) return null;
+    const customLabel = quoteSettings.labels?.[form.servico as keyof NonNullable<typeof quoteSettings.labels>];
+    return { ...base, label: (customLabel && customLabel.trim()) ? customLabel : base.label };
+  }, [form.servico, form.servicoCustomLabel, form.servicoCustomUnit, quoteSettings.labels]);
 
   const filteredClients = useMemo(() => {
     if (!clientSearch || clientId) return [];
@@ -159,7 +171,9 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   }, [mode, form, quoteSettings]);
 
   function calcServico() {
-    const basePrice = quoteSettings.prices[form.servico as keyof typeof quoteSettings.prices] ?? 0;
+    const basePrice = form.servico === 'personalizado'
+      ? (form.servicoCustomPrice ?? 0)
+      : (quoteSettings.prices[form.servico as keyof typeof quoteSettings.prices] ?? 0);
     if (form.uso === 'tv_ooh') {
       setIsNegotiable(true);
       setTotal(0);
@@ -322,7 +336,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
           {selectedClient.email && <p className="text-sm text-gray-500">{selectedClient.email}</p>}
         </div>
       )}
-      <h2 className="text-lg font-bold mb-4">{mode === 'servico' ? `Proposta — ${svcInfo?.label}` : 'Proposta de Avença'}</h2>
+      <h2 className="text-lg font-bold mb-4">{mode === 'avenca' ? 'Proposta de Avença' : `Proposta — ${svcInfo?.label ?? ''}`}</h2>
       <table className="w-full text-sm mb-6 border-collapse">
         <thead>
           <tr className="border-b border-gray-200">
@@ -460,11 +474,49 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                 <div>
                   <label className={labelCls}>Serviço</label>
                   <select className={inputCls} value={form.servico} onChange={e => upd('servico', e.target.value)} disabled={isReadOnly}>
-                    {Object.entries(SERVICE_INFO).map(([k, v]) => (
-                      <option key={k} value={k}>{v.label}</option>
-                    ))}
+                    {Object.entries(SERVICE_INFO).map(([k, v]) => {
+                      const customLabel = quoteSettings.labels?.[k as keyof NonNullable<typeof quoteSettings.labels>];
+                      return <option key={k} value={k}>{(customLabel && customLabel.trim()) ? customLabel : v.label}</option>;
+                    })}
+                    <option value="personalizado">Personalizado</option>
                   </select>
                 </div>
+
+                {/* Custom service fields */}
+                {form.servico === 'personalizado' && (
+                  <div className="grid grid-cols-1 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>Nome do serviço</label>
+                        <input
+                          className={inputCls} placeholder="ex: Drone, Podcast, Animação..."
+                          value={form.servicoCustomLabel}
+                          onChange={e => upd('servicoCustomLabel', e.target.value)}
+                          disabled={isReadOnly}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Unidade</label>
+                        <input
+                          className={inputCls} placeholder="ex: dia, un., projeto..."
+                          value={form.servicoCustomUnit}
+                          onChange={e => upd('servicoCustomUnit', e.target.value)}
+                          disabled={isReadOnly}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Preço base (€ por unidade)</label>
+                      <input
+                        type="number" min={0} className={inputCls} placeholder="ex: 500"
+                        value={form.servicoCustomPrice || ''}
+                        onChange={e => upd('servicoCustomPrice', +e.target.value || 0)}
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Quantidade <span className="normal-case text-slate-300 font-normal">({svcInfo?.unit})</span></label>

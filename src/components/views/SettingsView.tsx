@@ -262,6 +262,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
+          {/* Nomes dos serviços */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-1">Nomes dos Serviços</h3>
+            <p className="text-xs text-slate-400 mb-4">Deixa em branco para usar o nome padrão.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {([
+                ['fotografia_produto',    'Fotografia de Produto'],
+                ['fotografia_corporativa','Fotografia Corporativa / Eventos'],
+                ['video_institucional',   'Vídeo Institucional / Marca'],
+                ['reels_social',          'Reels / Conteúdo Social'],
+                ['campanha_completa',     'Campanha Completa (Foto + Vídeo)'],
+              ] as [string, string][]).map(([key, defaultLabel]) => (
+                <div key={key}>
+                  <label className={labelCls}>{defaultLabel}</label>
+                  <input
+                    className={inputCls}
+                    placeholder={defaultLabel}
+                    value={pricingForm.labels?.[key as keyof NonNullable<typeof pricingForm.labels>] ?? ''}
+                    onChange={e => setPricingForm(f => ({
+                      ...f,
+                      labels: { ...f.labels, [key]: e.target.value },
+                    }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Multiplicadores */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Multiplicadores de Uso</h3>

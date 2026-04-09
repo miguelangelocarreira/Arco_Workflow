@@ -107,6 +107,13 @@ export interface QuoteSettings {
     fixedFee: number;
   };
   revisionCost: number;
+  labels?: {
+    fotografia_produto?: string;
+    fotografia_corporativa?: string;
+    video_institucional?: string;
+    reels_social?: string;
+    campanha_completa?: string;
+  };
   updatedAt?: number;
 }
 
@@ -133,6 +140,10 @@ export interface Quote {
   duracao: number;
   precoAvenca: number;
   avencaItens: Record<string, number>;
+  // Personalizado
+  servicoCustomLabel?: string;
+  servicoCustomUnit?: string;
+  servicoCustomPrice?: number;
   // Common
   notas: string;
   total: number;
