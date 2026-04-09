@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Users, Activity, Building2, Layers,
+  Users, Activity, Building2, Layers, DollarSign,
   ArrowLeft, Check, ToggleLeft, ToggleRight,
-  Shield, ShieldOff, Plus, Minus
+  Shield, ShieldOff,
 } from 'lucide-react';
-import { ViewType, User, CompanySettings, PipelineStatus, ActivityLog } from '../../types';
+import { ViewType, User, CompanySettings, PipelineStatus, ActivityLog, QuoteSettings } from '../../types';
 import { useSettings } from '../../hooks/useSettings';
 import { subscribeActivity } from '../../utils/db';
 import { formatCurrency } from '../../utils/formatting';
@@ -12,9 +12,12 @@ import { formatCurrency } from '../../utils/formatting';
 interface SettingsViewProps {
   currentUser: User;
   setView: (view: ViewType) => void;
+  quoteSettings: QuoteSettings;
+  savingQuoteSettings: boolean;
+  updateQuoteSettings: (data: QuoteSettings) => Promise<void>;
 }
 
-type Tab = 'team' | 'activity' | 'company' | 'pipeline';
+type Tab = 'team' | 'activity' | 'company' | 'pipeline' | 'pricing';
 
 const ACTION_LABELS: Record<string, string> = {
   created_project: 'criou o projeto',
@@ -37,23 +40,26 @@ const formatTime = (ts: number) => {
   return new Date(ts).toLocaleDateString('pt-PT');
 };
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, setView }) => {
+const inputCls = 'w-full bg-slate-50 p-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all';
+const labelCls = 'text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1';
+
+export const SettingsView: React.FC<SettingsViewProps> = ({
+  currentUser, setView, quoteSettings, savingQuoteSettings, updateQuoteSettings,
+}) => {
   const [tab, setTab] = useState<Tab>(currentUser.role === 'admin' ? 'team' : 'activity');
   const { company, pipeline, users, savingCompany, savingPipeline, updateCompany, updatePipeline, toggleUserActive, changeUserRole } = useSettings();
 
-  // Company form state
+  // Company form
   const [companyForm, setCompanyForm] = useState<CompanySettings>({
-    name: '', nif: '', address: '', zip: '', city: '', phone: '', email: ''
+    name: '', nif: '', address: '', zip: '', city: '', phone: '', email: '',
   });
-  useEffect(() => {
-    if (company) setCompanyForm(company);
-  }, [company]);
+  useEffect(() => { if (company) setCompanyForm(company); }, [company]);
 
-  // Pipeline form state
+  // Pipeline form
   const [pipelineForm, setPipelineForm] = useState<PipelineStatus[]>(pipeline);
   useEffect(() => { setPipelineForm(pipeline); }, [pipeline]);
 
-  // Activity state
+  // Activity
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   useEffect(() => {
     if (tab !== 'activity') return;
@@ -61,13 +67,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, setView
     return () => unsub();
   }, [tab]);
 
+  // Pricing form (deep copy so edits don't mutate live settings)
+  const [pricingForm, setPricingForm] = useState<QuoteSettings>(quoteSettings);
+  useEffect(() => { setPricingForm(quoteSettings); }, [quoteSettings]);
+
   const isAdmin = currentUser.role === 'admin';
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; adminOnly?: boolean }[] = [
-    { id: 'team',     label: 'Equipa',    icon: <Users size={16} />,     adminOnly: true },
-    { id: 'activity', label: 'Atividade', icon: <Activity size={16} /> },
-    { id: 'company',  label: 'Empresa',   icon: <Building2 size={16} />, adminOnly: true },
-    { id: 'pipeline', label: 'Pipeline',  icon: <Layers size={16} />,   adminOnly: true },
+    { id: 'team',     label: 'Equipa',        icon: <Users size={16} />,      adminOnly: true },
+    { id: 'activity', label: 'Atividade',     icon: <Activity size={16} /> },
+    { id: 'company',  label: 'Empresa',       icon: <Building2 size={16} />,  adminOnly: true },
+    { id: 'pipeline', label: 'Pipeline',      icon: <Layers size={16} />,     adminOnly: true },
+    { id: 'pricing',  label: 'Orçamentação',  icon: <DollarSign size={16} />, adminOnly: true },
   ];
 
   return (
@@ -90,9 +101,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, setView
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
-              tab === t.id
-                ? 'bg-[#1e293b] text-white'
-                : 'bg-white text-slate-500 border border-slate-100 hover:border-slate-200'
+              tab === t.id ? 'bg-[#1e293b] text-white' : 'bg-white text-slate-500 border border-slate-100 hover:border-slate-200'
             }`}
           >
             {t.icon} {t.label}
@@ -106,9 +115,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, setView
           <p className="text-xs text-slate-400 mb-4">
             Para adicionar utilizadores vai ao <strong>Firebase Console → Authentication → Add user</strong>. O perfil é criado automaticamente no primeiro login.
           </p>
-          {users.length === 0 && (
-            <div className="text-center py-10 text-slate-300 text-sm">Nenhum utilizador registado ainda.</div>
-          )}
+          {users.length === 0 && <div className="text-center py-10 text-slate-300 text-sm">Nenhum utilizador registado ainda.</div>}
           {users.map(u => (
             <div key={u.uid} className="bg-white rounded-2xl p-4 border border-slate-100 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -121,30 +128,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, setView
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {/* Role toggle */}
                 {u.uid !== currentUser.uid && (
                   <button
                     onClick={() => changeUserRole(u.uid, u.role === 'admin' ? 'user' : 'admin')}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      u.role === 'admin'
-                        ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                        : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
-                    }`}
-                    title="Clica para mudar função"
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${u.role === 'admin' ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
                   >
                     {u.role === 'admin' ? <Shield size={12} /> : <ShieldOff size={12} />}
                     {u.role === 'admin' ? 'Admin' : 'User'}
                   </button>
                 )}
-                {u.uid === currentUser.uid && (
-                  <span className="text-xs text-slate-300 font-bold px-3 py-1.5">Tu</span>
-                )}
-                {/* Active toggle */}
+                {u.uid === currentUser.uid && <span className="text-xs text-slate-300 font-bold px-3 py-1.5">Tu</span>}
                 {u.uid !== currentUser.uid && (
                   <button
                     onClick={() => toggleUserActive(u.uid, !u.active)}
                     className={`transition-colors ${u.active ? 'text-emerald-400 hover:text-emerald-600' : 'text-red-300 hover:text-red-500'}`}
-                    title={u.active ? 'Desativar conta' : 'Ativar conta'}
                   >
                     {u.active ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
                   </button>
@@ -195,29 +192,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, setView
           <p className="text-xs text-slate-400 mb-2">Estes dados aparecem nos orçamentos em PDF.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {([
-              ['name',    'Nome da Empresa'],
-              ['nif',     'NIF'],
-              ['email',   'Email'],
-              ['phone',   'Telefone'],
-              ['address', 'Morada'],
-              ['zip',     'Código Postal'],
-              ['city',    'Cidade'],
+              ['name', 'Nome da Empresa'], ['nif', 'NIF'], ['email', 'Email'],
+              ['phone', 'Telefone'], ['address', 'Morada'], ['zip', 'Código Postal'], ['city', 'Cidade'],
             ] as [keyof CompanySettings, string][]).map(([field, label]) => (
               <div key={field} className={field === 'address' ? 'md:col-span-2' : ''}>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">{label}</label>
-                <input
-                  className="w-full bg-slate-50 p-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                  value={companyForm[field]}
-                  onChange={e => setCompanyForm({ ...companyForm, [field]: e.target.value })}
-                />
+                <label className={labelCls}>{label}</label>
+                <input className={inputCls} value={companyForm[field]} onChange={e => setCompanyForm({ ...companyForm, [field]: e.target.value })} />
               </div>
             ))}
           </div>
-          <button
-            type="submit"
-            disabled={savingCompany}
-            className="flex items-center gap-2 bg-[#1e293b] text-white font-bold py-3 px-6 rounded-xl text-sm hover:bg-slate-700 transition-all disabled:opacity-70"
-          >
+          <button type="submit" disabled={savingCompany} className="flex items-center gap-2 bg-[#1e293b] text-white font-bold py-3 px-6 rounded-xl text-sm hover:bg-slate-700 transition-all disabled:opacity-70">
             <Check size={16} /> {savingCompany ? 'A guardar...' : 'Guardar'}
           </button>
         </form>
@@ -234,25 +218,112 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, setView
                 <input
                   className="flex-1 bg-slate-50 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100"
                   value={s.label}
-                  onChange={e => {
-                    const next = [...pipelineForm];
-                    next[i] = { ...next[i], label: e.target.value };
-                    setPipelineForm(next);
-                  }}
-                />
-                <div
-                  className="w-6 h-6 rounded-full border-2 border-slate-200 shrink-0"
-                  style={{ background: s.color.match(/bg-(\w+-\d+)/)?.[0] ?? '#94a3b8' }}
+                  onChange={e => { const next = [...pipelineForm]; next[i] = { ...next[i], label: e.target.value }; setPipelineForm(next); }}
                 />
               </div>
             ))}
           </div>
+          <button onClick={() => updatePipeline(pipelineForm)} disabled={savingPipeline} className="flex items-center gap-2 bg-[#1e293b] text-white font-bold py-3 px-6 rounded-xl text-sm hover:bg-slate-700 transition-all disabled:opacity-70">
+            <Check size={16} /> {savingPipeline ? 'A guardar...' : 'Guardar'}
+          </button>
+        </div>
+      )}
+
+      {/* ── ORÇAMENTAÇÃO ───────────────────────────────────────── */}
+      {tab === 'pricing' && isAdmin && (
+        <div className="space-y-4">
+          <p className="text-xs text-slate-400">
+            Alterações a estes valores aplicam-se apenas a novos orçamentos. Os já guardados mantêm os valores que tinham.
+            {quoteSettings.updatedAt && (
+              <span className="ml-2 text-slate-300">Última atualização: {new Date(quoteSettings.updatedAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            )}
+          </p>
+
+          {/* Preços base */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Preços Base por Serviço</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {([
+                ['fotografia_produto',    'Fotografia de Produto (€/lote)'],
+                ['fotografia_corporativa','Fotografia Corporativa (€/dia)'],
+                ['video_institucional',   'Vídeo Institucional (€/projeto)'],
+                ['reels_social',          'Reels / Conteúdo Social (€/peça)'],
+                ['campanha_completa',     'Campanha Completa (€/projeto)'],
+              ] as [keyof QuoteSettings['prices'], string][]).map(([field, label]) => (
+                <div key={field}>
+                  <label className={labelCls}>{label}</label>
+                  <input
+                    type="number" min={0} className={inputCls}
+                    value={pricingForm.prices[field]}
+                    onChange={e => setPricingForm(f => ({ ...f, prices: { ...f.prices, [field]: +e.target.value || 0 } }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Multiplicadores */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Multiplicadores de Uso</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Digital Orgânico (×)</label>
+                <input type="number" min={1} step={0.1} className={inputCls} value={pricingForm.multipliers.digital_organico}
+                  onChange={e => setPricingForm(f => ({ ...f, multipliers: { ...f.multipliers, digital_organico: +e.target.value || 1 } }))} />
+              </div>
+              <div>
+                <label className={labelCls}>Campanha Paga / Ads (×)</label>
+                <input type="number" min={1} step={0.1} className={inputCls} value={pricingForm.multipliers.campanha_paga}
+                  onChange={e => setPricingForm(f => ({ ...f, multipliers: { ...f.multipliers, campanha_paga: +e.target.value || 1 } }))} />
+              </div>
+            </div>
+          </div>
+
+          {/* Urgência */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Majoração de Urgência</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Urgente &lt;7 dias (%)</label>
+                <input type="number" min={0} max={100} className={inputCls} value={Math.round(pricingForm.urgency.short * 100)}
+                  onChange={e => setPricingForm(f => ({ ...f, urgency: { ...f.urgency, short: (+e.target.value || 0) / 100 } }))} />
+              </div>
+              <div>
+                <label className={labelCls}>Muito urgente &lt;3 dias (%)</label>
+                <input type="number" min={0} max={100} className={inputCls} value={Math.round(pricingForm.urgency.extreme * 100)}
+                  onChange={e => setPricingForm(f => ({ ...f, urgency: { ...f.urgency, extreme: (+e.target.value || 0) / 100 } }))} />
+              </div>
+            </div>
+          </div>
+
+          {/* Custos adicionais */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Custos Adicionais</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className={labelCls}>Custo por km (€)</label>
+                <input type="number" min={0} step={0.01} className={inputCls} value={pricingForm.travel.perKm}
+                  onChange={e => setPricingForm(f => ({ ...f, travel: { ...f.travel, perKm: +e.target.value || 0 } }))} />
+              </div>
+              <div>
+                <label className={labelCls}>Taxa fixa deslocação (€)</label>
+                <input type="number" min={0} className={inputCls} value={pricingForm.travel.fixedFee}
+                  onChange={e => setPricingForm(f => ({ ...f, travel: { ...f.travel, fixedFee: +e.target.value || 0 } }))} />
+              </div>
+              <div>
+                <label className={labelCls}>Ronda de revisão extra (€)</label>
+                <input type="number" min={0} className={inputCls} value={pricingForm.revisionCost}
+                  onChange={e => setPricingForm(f => ({ ...f, revisionCost: +e.target.value || 0 }))} />
+              </div>
+            </div>
+          </div>
+
           <button
-            onClick={() => updatePipeline(pipelineForm)}
-            disabled={savingPipeline}
+            onClick={() => updateQuoteSettings(pricingForm)}
+            disabled={savingQuoteSettings}
             className="flex items-center gap-2 bg-[#1e293b] text-white font-bold py-3 px-6 rounded-xl text-sm hover:bg-slate-700 transition-all disabled:opacity-70"
           >
-            <Check size={16} /> {savingPipeline ? 'A guardar...' : 'Guardar'}
+            <Check size={16} /> {savingQuoteSettings ? 'A guardar...' : 'Guardar configurações'}
           </button>
         </div>
       )}

@@ -15,7 +15,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Client, Project, ActivityLog, ActivityAction, UserProfile, CompanySettings, PipelineStatus } from '../types';
+import { Client, Project, ActivityLog, ActivityAction, UserProfile, CompanySettings, PipelineStatus, Quote, QuoteSettings } from '../types';
 
 // ── Collections ──────────────────────────────────────────────────────────────
 
@@ -181,6 +181,54 @@ export const subscribePipelineSettings = (onChange: (s: PipelineStatus[]) => voi
   return onSnapshot(settingsDoc('pipeline'), snap => {
     onChange(snap.exists() ? (snap.data().statuses as PipelineStatus[]) : defaults);
   });
+};
+
+// ── Quotes ────────────────────────────────────────────────────────────────────
+
+const quotesCol = collection(db, 'quotes');
+
+export const subscribeClientQuotes = (clientId: string, onChange: (quotes: Quote[]) => void) => {
+  const q = query(quotesCol, orderBy('createdAt', 'desc'), limit(50));
+  return onSnapshot(q, snapshot => {
+    onChange(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Quote)).filter(q => q.clientId === clientId));
+  });
+};
+
+export const createQuoteDoc = async (payload: Omit<Quote, 'id'>): Promise<Quote> => {
+  const ref = await addDoc(quotesCol, payload);
+  return { id: ref.id, ...payload };
+};
+
+export const updateQuoteDoc = async (id: string, patch: Partial<Quote>): Promise<void> => {
+  await updateDoc(doc(quotesCol, id), patch as Record<string, unknown>);
+};
+
+export const deleteQuoteDoc = async (id: string): Promise<void> => {
+  await deleteDoc(doc(quotesCol, id));
+};
+
+export const DEFAULT_QUOTE_SETTINGS: QuoteSettings = {
+  prices: {
+    fotografia_produto: 350,
+    fotografia_corporativa: 650,
+    video_institucional: 1800,
+    reels_social: 280,
+    campanha_completa: 3200,
+  },
+  multipliers: { digital_organico: 1.3, campanha_paga: 1.6 },
+  urgency: { short: 0.2, extreme: 0.3 },
+  travel: { perKm: 0.35, fixedFee: 50 },
+  revisionCost: 80,
+};
+
+export const subscribeQuoteSettings = (onChange: (s: QuoteSettings) => void) => {
+  return onSnapshot(settingsDoc('quoteSettings'), snap => {
+    onChange(snap.exists() ? (snap.data() as QuoteSettings) : DEFAULT_QUOTE_SETTINGS);
+  });
+};
+
+export const saveQuoteSettings = async (data: QuoteSettings): Promise<void> => {
+  await setDoc(settingsDoc('quoteSettings'), data);
 };
 
 // ── Seed (first-time setup) ───────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, BarChart3, Layers, Briefcase, Users, Settings } from 'lucide-react';
+import { LogOut, BarChart3, Layers, Briefcase, Users, Settings, FileText } from 'lucide-react';
 import { ViewType, User } from '../../types';
 
 interface SidebarProps {
@@ -9,9 +9,10 @@ interface SidebarProps {
   setGlobalSearchTerm: (term: string) => void;
   handleLogout: () => void;
   handleLogoClick: (e: React.MouseEvent) => void;
+  onNewQuote: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ view, currentUser, setView, setGlobalSearchTerm, handleLogout, handleLogoClick }) => (
+export const Sidebar: React.FC<SidebarProps> = ({ view, currentUser, setView, setGlobalSearchTerm, handleLogout, handleLogoClick, onNewQuote }) => (
   <div className="hidden md:flex flex-col w-64 bg-[#1e293b] h-screen fixed left-0 top-0 z-50 shadow-2xl">
     <div className="p-8 flex items-center gap-2 h-[80px] cursor-pointer hover:opacity-90 transition-opacity" onClick={handleLogoClick}>
       <span className="text-3xl font-black text-white tracking-tighter font-sans">ARCO</span>
@@ -39,9 +40,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, currentUser, setView, se
       </button>
       <button
         onClick={() => { setView('clients'); setGlobalSearchTerm(""); }}
-        className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${view === 'clients' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+        className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${view === 'clients' || view === 'client-detail' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
       >
         <Users size={20} /> <span className="font-bold text-sm">Clientes</span>
+      </button>
+      <button
+        onClick={() => { onNewQuote(); setGlobalSearchTerm(""); }}
+        className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${view === 'new-quote' || view === 'quote-detail' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+      >
+        <FileText size={20} /> <span className="font-bold text-sm">Orçamentos</span>
       </button>
     </div>
 

@@ -1,13 +1,14 @@
 import React from 'react';
-import { Briefcase, BarChart3, Layers, FolderOpen, UserPlus, Settings } from 'lucide-react';
+import { Briefcase, BarChart3, Layers, FolderOpen, UserPlus, Settings, FileText } from 'lucide-react';
 import { ViewType } from '../../types';
 
 interface MainMenuViewProps {
   setView: (view: ViewType) => void;
   setFilterStatus: (status: string) => void;
+  onNewQuote: () => void;
 }
 
-export const MainMenuView: React.FC<MainMenuViewProps> = ({ setView, setFilterStatus }) => (
+export const MainMenuView: React.FC<MainMenuViewProps> = ({ setView, setFilterStatus, onNewQuote }) => (
   <div className="p-6 flex flex-col h-full justify-between md:hidden pb-24">
     <div>
       <div className="grid grid-cols-2 gap-4 mb-4 mt-4">
@@ -70,6 +71,12 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({ setView, setFilterSt
           className="flex-1 bg-slate-100 rounded-[1.5rem] py-4 px-6 flex items-center justify-center gap-2 text-[#1e293b] font-bold text-sm hover:bg-slate-200 active:scale-[0.98] transition-all min-h-[56px]"
         >
           <UserPlus size={18} /> Clientes
+        </button>
+        <button
+          onClick={onNewQuote}
+          className="flex-1 bg-slate-100 rounded-[1.5rem] py-4 px-6 flex items-center justify-center gap-2 text-[#1e293b] font-bold text-sm hover:bg-slate-200 active:scale-[0.98] transition-all min-h-[56px]"
+        >
+          <FileText size={18} /> Orçamento
         </button>
         <button
           onClick={() => setView("settings")}

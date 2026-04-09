@@ -81,6 +81,71 @@ export interface ServiceSuggestion {
   }>;
 }
 
+// ── Quote types ───────────────────────────────────────────────────────────────
+
+export type QuoteMode = 'servico' | 'avenca';
+export type QuoteStatus = 'rascunho' | 'enviado' | 'aprovado' | 'recusado' | 'fatura';
+
+export interface QuoteSettings {
+  prices: {
+    fotografia_produto: number;
+    fotografia_corporativa: number;
+    video_institucional: number;
+    reels_social: number;
+    campanha_completa: number;
+  };
+  multipliers: {
+    digital_organico: number;
+    campanha_paga: number;
+  };
+  urgency: {
+    short: number;
+    extreme: number;
+  };
+  travel: {
+    perKm: number;
+    fixedFee: number;
+  };
+  revisionCost: number;
+  updatedAt?: number;
+}
+
+export interface QuoteBreakdownItem {
+  label: string;
+  val: number | string;
+}
+
+export interface Quote {
+  id: string;
+  clientId: string;
+  mode: QuoteMode;
+  status: QuoteStatus;
+  // Serviço fields
+  servico: string;
+  quantidade: number;
+  uso: string;
+  urgencia: number;
+  deslocacao: boolean;
+  deslocacaoKm: number;
+  revisoes: number;
+  desconto: number;
+  // Avença fields
+  duracao: number;
+  precoAvenca: number;
+  avencaItens: Record<string, number>;
+  // Common
+  notas: string;
+  total: number;
+  breakdown: QuoteBreakdownItem[];
+  settingsSnapshot: QuoteSettings;
+  createdAt: number;
+  updatedAt: number;
+  createdBy: string;
+  createdByName: string;
+}
+
+// ── View routing ──────────────────────────────────────────────────────────────
+
 export type ViewType =
   | 'menu'
   | 'stats'
@@ -90,7 +155,9 @@ export type ViewType =
   | 'client-detail'
   | 'create-project'
   | 'search-results'
-  | 'settings';
+  | 'settings'
+  | 'new-quote'
+  | 'quote-detail';
 
 export type ActivityAction =
   | 'created_project'

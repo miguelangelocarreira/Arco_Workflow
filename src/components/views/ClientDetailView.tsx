@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Mail, Phone, MapPin, FileText, Activity } from 'lucide-react';
-import { ViewType, Client, Project, ActivityLog } from '../../types';
-import { subscribeClientActivity } from '../../utils/db';
+import { ArrowLeft, Mail, Phone, MapPin, FileText, Activity, Plus } from 'lucide-react';
+import { ViewType, Client, Project, Quote, ActivityLog } from '../../types';
+import { subscribeClientActivity, subscribeClientQuotes } from '../../utils/db';
 import { formatCurrency } from '../../utils/formatting';
 import { calcProjectTotal } from '../../utils/project-calculations';
 import { PROJECT_STATUSES } from '../../constants/project-data';
@@ -11,6 +11,8 @@ interface ClientDetailViewProps {
   projects: Project[];
   setView: (view: ViewType) => void;
   setSelectedProjectId: (id: string) => void;
+  onNewQuote: (clientId: string) => void;
+  onViewQuote: (quote: Quote) => void;
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -34,18 +36,28 @@ const formatTime = (ts: number) => {
   return new Date(ts).toLocaleDateString('pt-PT');
 };
 
+const QUOTE_STATUS_COLORS: Record<string, string> = {
+  rascunho: 'bg-slate-100 text-slate-600',
+  enviado: 'bg-blue-50 text-blue-600',
+  aprovado: 'bg-emerald-50 text-emerald-600',
+  recusado: 'bg-red-50 text-red-500',
+  fatura: 'bg-purple-50 text-purple-600',
+};
+const QUOTE_STATUS_LABELS: Record<string, string> = {
+  rascunho: 'Rascunho', enviado: 'Enviado', aprovado: 'Aprovado', recusado: 'Recusado', fatura: 'Fatura',
+};
+
 export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
-  selectedClient,
-  projects,
-  setView,
-  setSelectedProjectId,
+  selectedClient, projects, setView, setSelectedProjectId, onNewQuote, onViewQuote,
 }) => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
 
   useEffect(() => {
     if (!selectedClient) return;
-    const unsub = subscribeClientActivity(selectedClient.id, setLogs);
-    return () => unsub();
+    const u1 = subscribeClientActivity(selectedClient.id, setLogs);
+    const u2 = subscribeClientQuotes(selectedClient.id, setQuotes);
+    return () => { u1(); u2(); };
   }, [selectedClient]);
 
   const clientProjects = useMemo(
@@ -55,12 +67,8 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
 
   const stats = useMemo(() => {
     const total = clientProjects.reduce((s, p) => s + calcProjectTotal(p), 0);
-    const toInvoice = clientProjects
-      .filter(p => p.status === 'faturar')
-      .reduce((s, p) => s + calcProjectTotal(p), 0);
-    const paid = clientProjects
-      .filter(p => p.status === 'pago')
-      .reduce((s, p) => s + calcProjectTotal(p), 0);
+    const toInvoice = clientProjects.filter(p => p.status === 'faturar').reduce((s, p) => s + calcProjectTotal(p), 0);
+    const paid = clientProjects.filter(p => p.status === 'pago').reduce((s, p) => s + calcProjectTotal(p), 0);
     return { total, toInvoice, paid };
   }, [clientProjects]);
 
@@ -68,9 +76,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
     return (
       <div className="p-10 text-center text-slate-400">
         <p>Cliente não encontrado.</p>
-        <button onClick={() => setView('clients')} className="mt-4 text-sm font-bold text-slate-600 underline">
-          Voltar
-        </button>
+        <button onClick={() => setView('clients')} className="mt-4 text-sm font-bold text-slate-600 underline">Voltar</button>
       </div>
     );
   }
@@ -79,33 +85,25 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
     <div className="p-4 md:p-10 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
-        <button
-          onClick={() => setView('clients')}
-          className="p-2 bg-white rounded-full shadow-sm border border-slate-100"
-        >
+        <button onClick={() => setView('clients')} className="p-2 bg-white rounded-full shadow-sm border border-slate-100">
           <ArrowLeft size={16} className="text-slate-700" />
         </button>
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">{selectedClient.name}</h1>
-          {selectedClient.nif && (
-            <span className="text-xs font-mono text-slate-400">NIF: {selectedClient.nif}</span>
-          )}
+          {selectedClient.nif && <span className="text-xs font-mono text-slate-400">NIF: {selectedClient.nif}</span>}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Contact info */}
+
+          {/* Contact */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Contacto</h2>
             <div className="space-y-2 text-sm text-slate-700">
-              {selectedClient.email && (
-                <p className="flex items-center gap-2"><Mail size={14} className="text-slate-400" /> {selectedClient.email}</p>
-              )}
-              {selectedClient.phone && (
-                <p className="flex items-center gap-2"><Phone size={14} className="text-slate-400" /> {selectedClient.phone}</p>
-              )}
+              {selectedClient.email && <p className="flex items-center gap-2"><Mail size={14} className="text-slate-400" /> {selectedClient.email}</p>}
+              {selectedClient.phone && <p className="flex items-center gap-2"><Phone size={14} className="text-slate-400" /> {selectedClient.phone}</p>}
               {selectedClient.address && (
                 <p className="flex items-center gap-2">
                   <MapPin size={14} className="text-slate-400 shrink-0" />
@@ -113,6 +111,54 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Quotes */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Orçamentos ({quotes.length})
+              </h2>
+              <button
+                onClick={() => onNewQuote(selectedClient.id)}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:border-slate-300 transition-all"
+              >
+                <Plus size={12} /> Novo Orçamento
+              </button>
+            </div>
+            {quotes.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 border border-slate-100 text-center text-slate-300 text-sm">
+                <FileText size={32} className="mx-auto mb-2 opacity-40" />
+                Sem orçamentos criados.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {quotes.map(q => (
+                  <button
+                    key={q.id}
+                    onClick={() => onViewQuote(q)}
+                    className="w-full bg-white rounded-2xl p-4 border border-slate-100 hover:shadow-md transition-all text-left flex items-center justify-between gap-4"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 text-sm truncate">
+                        {q.mode === 'servico'
+                          ? (q.servico?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) ?? 'Serviço')
+                          : `Avença ${q.duracao}m`}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5">{new Date(q.createdAt).toLocaleDateString('pt-PT')}</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${QUOTE_STATUS_COLORS[q.status] ?? ''}`}>
+                        {QUOTE_STATUS_LABELS[q.status] ?? q.status}
+                      </span>
+                      <span className="text-sm font-bold text-slate-700">
+                        {q.total > 0 ? formatCurrency(q.total) : '—'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Projects */}
@@ -183,7 +229,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
           )}
         </div>
 
-        {/* Right sidebar — stats */}
+        {/* Right sidebar */}
         <div className="space-y-3">
           <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Total de Projetos</p>
@@ -201,6 +247,12 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
             <p className="text-xs text-emerald-500 font-bold uppercase tracking-wider mb-1">Pago</p>
             <p className="text-2xl font-black text-emerald-700">{formatCurrency(stats.paid)}</p>
           </div>
+          <button
+            onClick={() => onNewQuote(selectedClient.id)}
+            className="w-full flex items-center justify-center gap-2 bg-[#1e293b] text-white font-bold py-3 rounded-xl text-sm hover:bg-slate-700 transition-all"
+          >
+            <Plus size={16} /> Novo Orçamento
+          </button>
         </div>
       </div>
     </div>

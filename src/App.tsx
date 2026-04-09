@@ -9,22 +9,29 @@ import { ProjectsView } from './components/views/ProjectsView';
 import { CreateProjectView } from './components/views/CreateProjectView';
 import { ProjectDetailView } from './components/views/ProjectDetailView';
 import { ClientsView } from './components/views/ClientsView';
+import { ClientDetailView } from './components/views/ClientDetailView';
 import { SearchResultsView } from './components/views/SearchResultsView';
 import { SettingsView } from './components/views/SettingsView';
-import { ClientDetailView } from './components/views/ClientDetailView';
+import { QuoteView } from './components/views/QuoteView';
 import { useAuth } from './hooks/useAuth';
 import { useData } from './hooks/useData';
-import { ViewType } from './types';
+import { useQuotes } from './hooks/useQuotes';
+import { ViewType, Quote } from './types';
 
 function App() {
   const { authLoading, authError, currentUser, showSplash, setShowSplash, resetSent, handleLogin, handleForgotPassword, handleLogout } = useAuth();
   const { clients, projects, loadingData, createClient, createProject, updateProject, deleteProject } = useData(currentUser);
+  const { quoteSettings, savingSettings, createQuote, updateQuote, deleteQuote, updateQuoteSettings } = useQuotes(currentUser);
 
   // VIEW STATES
   const [view, setView] = useState<ViewType>("menu");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("todos");
+
+  // QUOTE STATES
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [quoteDefaultClientId, setQuoteDefaultClientId] = useState<string | null>(null);
 
   // SEARCH STATE
   const [globalSearchTerm, setGlobalSearchTerm] = useState("");
@@ -33,6 +40,21 @@ function App() {
   const isAdmin = currentUser?.role === "admin";
   const selectedProject = useMemo(() => projects.find((p) => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const selectedClient = useMemo(() => clients.find((c) => c.id === selectedClientId) || null, [clients, selectedClientId]);
+
+  // Quote navigation helpers
+  const handleNewQuote = (clientId?: string) => {
+    setSelectedQuote(null);
+    setQuoteDefaultClientId(clientId ?? null);
+    if (clientId) setSelectedClientId(clientId);
+    setView('new-quote');
+  };
+
+  const handleViewQuote = (quote: Quote) => {
+    setSelectedQuote(quote);
+    setQuoteDefaultClientId(null);
+    setSelectedClientId(quote.clientId);
+    setView('quote-detail');
+  };
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -55,18 +77,15 @@ function App() {
   const searchResults = useMemo(() => {
     if (!globalSearchTerm) return { projects: [], clients: [] };
     const lower = globalSearchTerm.toLowerCase();
-
     const matchedProjects = projects.filter(p => {
       const cName = clients.find(c => c.id === p.clientId)?.name || "";
       return p.title.toLowerCase().includes(lower) || cName.toLowerCase().includes(lower);
     });
-
     const matchedClients = clients.filter(c =>
       c.name.toLowerCase().includes(lower) ||
       c.email.toLowerCase().includes(lower) ||
       (c.nif && c.nif.includes(lower))
     );
-
     return { projects: matchedProjects, clients: matchedClients };
   }, [globalSearchTerm, projects, clients]);
 
@@ -90,10 +109,11 @@ function App() {
         setGlobalSearchTerm={setGlobalSearchTerm}
         handleLogout={handleLogout}
         handleLogoClick={handleLogoClick}
+        onNewQuote={() => handleNewQuote()}
       />
-      
+
       <main className="flex-1 w-full bg-[#f8fafc] min-h-screen md:ml-64 transition-all flex flex-col">
-        <TopBar 
+        <TopBar
           currentUser={currentUser}
           isAdmin={isAdmin}
           globalSearchTerm={globalSearchTerm}
@@ -111,47 +131,69 @@ function App() {
             </div>
           )}
 
-          {view === "menu" && <MainMenuView setView={setView} setFilterStatus={setFilterStatus} />}
+          {view === "menu" && <MainMenuView setView={setView} setFilterStatus={setFilterStatus} onNewQuote={() => handleNewQuote()} />}
           {view === "stats" && <StatisticsView currentUser={currentUser} projects={projects} clients={clients} setView={setView} />}
           {view === "projects" && (
-            <ProjectsView 
-              projects={projects}
-              clients={clients}
-              filterStatus={filterStatus}
-              setFilterStatus={setFilterStatus}
-              setView={setView}
-              setSelectedProjectId={setSelectedProjectId}
+            <ProjectsView
+              projects={projects} clients={clients}
+              filterStatus={filterStatus} setFilterStatus={setFilterStatus}
+              setView={setView} setSelectedProjectId={setSelectedProjectId}
             />
           )}
           {view === "create-project" && (
-            <CreateProjectView 
-              clients={clients}
-              createProject={createProject}
-              setView={setView}
-              setSelectedProjectId={setSelectedProjectId}
+            <CreateProjectView
+              clients={clients} createProject={createProject}
+              setView={setView} setSelectedProjectId={setSelectedProjectId}
             />
           )}
           {view === "project-detail" && (
-            <ProjectDetailView 
-              selectedProject={selectedProject}
-              clients={clients}
-              currentUser={currentUser}
-              isAdmin={isAdmin}
-              updateProject={updateProject}
-              deleteProject={deleteProject}
+            <ProjectDetailView
+              selectedProject={selectedProject} clients={clients}
+              currentUser={currentUser} isAdmin={isAdmin}
+              updateProject={updateProject} deleteProject={deleteProject}
               setView={setView}
             />
           )}
-          {view === "clients" && <ClientsView clients={clients} createClient={createClient} setView={setView} setSelectedClientId={setSelectedClientId} />}
-          {view === "client-detail" && <ClientDetailView selectedClient={selectedClient} projects={projects} setView={setView} setSelectedProjectId={setSelectedProjectId} />}
-          {view === "settings" && <SettingsView currentUser={currentUser} setView={setView} />}
-          {view === "search-results" && (
-            <SearchResultsView 
-              searchResults={searchResults}
+          {view === "clients" && (
+            <ClientsView
+              clients={clients} createClient={createClient}
+              setView={setView} setSelectedClientId={setSelectedClientId}
+            />
+          )}
+          {view === "client-detail" && (
+            <ClientDetailView
+              selectedClient={selectedClient} projects={projects}
+              setView={setView} setSelectedProjectId={setSelectedProjectId}
+              onNewQuote={handleNewQuote} onViewQuote={handleViewQuote}
+            />
+          )}
+          {view === "settings" && (
+            <SettingsView
+              currentUser={currentUser} setView={setView}
+              quoteSettings={quoteSettings}
+              savingQuoteSettings={savingSettings}
+              updateQuoteSettings={updateQuoteSettings}
+            />
+          )}
+          {(view === "new-quote" || view === "quote-detail") && (
+            <QuoteView
               clients={clients}
-              setSelectedProjectId={setSelectedProjectId}
+              quoteSettings={quoteSettings}
+              currentUser={currentUser}
+              selectedQuote={view === "quote-detail" ? selectedQuote : null}
+              defaultClientId={quoteDefaultClientId}
+              createQuote={createQuote}
+              updateQuote={updateQuote}
+              deleteQuote={deleteQuote}
               setView={setView}
-              setGlobalSearchTerm={setGlobalSearchTerm}
+              setSelectedClientId={setSelectedClientId}
+            />
+          )}
+          {view === "search-results" && (
+            <SearchResultsView
+              searchResults={searchResults} clients={clients}
+              setSelectedProjectId={setSelectedProjectId}
+              setView={setView} setGlobalSearchTerm={setGlobalSearchTerm}
             />
           )}
         </div>
