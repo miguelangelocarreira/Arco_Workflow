@@ -87,6 +87,7 @@ export type ViewType =
   | 'projects'
   | 'project-detail'
   | 'clients'
+  | 'client-detail'
   | 'create-project'
   | 'search-results'
   | 'settings';

@@ -6,9 +6,10 @@ interface ClientsViewProps {
   clients: Client[];
   createClient: (payload: Partial<Client>) => Promise<Client>;
   setView: (view: ViewType) => void;
+  setSelectedClientId: (id: string) => void;
 }
 
-export const ClientsView: React.FC<ClientsViewProps> = ({ clients, createClient, setView }) => {
+export const ClientsView: React.FC<ClientsViewProps> = ({ clients, createClient, setView, setSelectedClientId }) => {
   const [form, setForm] = useState({ 
     name: "", 
     email: "", 
@@ -102,7 +103,11 @@ export const ClientsView: React.FC<ClientsViewProps> = ({ clients, createClient,
 
         <div className="lg:col-span-2 space-y-2">
           {clients.map(c => (
-            <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-50 hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <button
+              key={c.id}
+              onClick={() => { setSelectedClientId(c.id); setView('client-detail'); }}
+              className="w-full bg-white p-5 rounded-2xl border border-slate-50 hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 text-left"
+            >
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-slate-900 text-lg">{c.name}</span>
@@ -114,10 +119,8 @@ export const ClientsView: React.FC<ClientsViewProps> = ({ clients, createClient,
                 </div>
                 {c.address && <p className="text-xs text-slate-400 mt-1 flex items-center gap-1"><MapPin size={12}/> {c.address}, {c.city}</p>}
               </div>
-              <button className="p-2 text-slate-300 hover:text-slate-500 self-end md:self-center bg-slate-50 rounded-lg">
-                <Edit3 size={18} />
-              </button>
-            </div>
+              <Edit3 size={18} className="text-slate-300 self-end md:self-center shrink-0" />
+            </button>
           ))}
           {clients.length === 0 && (
             <div className="text-center py-10 opacity-50">

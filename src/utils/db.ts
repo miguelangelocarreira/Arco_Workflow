@@ -110,6 +110,16 @@ export const subscribeProjectActivity = (projectId: string, onChange: (logs: Act
   });
 };
 
+export const subscribeClientActivity = (clientId: string, onChange: (logs: ActivityLog[]) => void) => {
+  const q = query(activityCol, orderBy('timestamp', 'desc'), limit(100));
+  return onSnapshot(q, snapshot => {
+    const logs = snapshot.docs
+      .map(d => ({ id: d.id, ...d.data() } as ActivityLog))
+      .filter(l => l.entityId === clientId);
+    onChange(logs);
+  });
+};
+
 // ── Users ─────────────────────────────────────────────────────────────────────
 
 export const upsertUserProfile = async (profile: UserProfile): Promise<void> => {

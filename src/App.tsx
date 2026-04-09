@@ -11,6 +11,7 @@ import { ProjectDetailView } from './components/views/ProjectDetailView';
 import { ClientsView } from './components/views/ClientsView';
 import { SearchResultsView } from './components/views/SearchResultsView';
 import { SettingsView } from './components/views/SettingsView';
+import { ClientDetailView } from './components/views/ClientDetailView';
 import { useAuth } from './hooks/useAuth';
 import { useData } from './hooks/useData';
 import { ViewType } from './types';
@@ -22,6 +23,7 @@ function App() {
   // VIEW STATES
   const [view, setView] = useState<ViewType>("menu");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("todos");
 
   // SEARCH STATE
@@ -30,6 +32,7 @@ function App() {
 
   const isAdmin = currentUser?.role === "admin";
   const selectedProject = useMemo(() => projects.find((p) => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
+  const selectedClient = useMemo(() => clients.find((c) => c.id === selectedClientId) || null, [clients, selectedClientId]);
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -139,7 +142,8 @@ function App() {
               setView={setView}
             />
           )}
-          {view === "clients" && <ClientsView clients={clients} createClient={createClient} setView={setView} />}
+          {view === "clients" && <ClientsView clients={clients} createClient={createClient} setView={setView} setSelectedClientId={setSelectedClientId} />}
+          {view === "client-detail" && <ClientDetailView selectedClient={selectedClient} projects={projects} setView={setView} setSelectedProjectId={setSelectedProjectId} />}
           {view === "settings" && <SettingsView currentUser={currentUser} setView={setView} />}
           {view === "search-results" && (
             <SearchResultsView 
